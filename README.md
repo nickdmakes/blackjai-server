@@ -1,11 +1,6 @@
 <!-- PROJECT LOGO -->
-<br />
 <div align="center">
-  <a href="https://github.com/github_username/repo_name">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
-  </a>
-
-<h3 align="center">blackjai-server</h3>
+<h1 align="center">blackjai-server</h1>
 
   <p align="center">
     Responsible for image data preprocessing and game state engine behind BlackJAI system
@@ -44,19 +39,11 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
-Here's a blank template to get started: To avoid retyping too much info. Do a search and replace with your text editor for the following: `github_username`, `repo_name`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
-
-
 ### Built With
 
 * Python
-
-<p align="right">(<a href="#top">back to top</a>)</p>
+* OpenCV
+* roboflow 
 
 
 
@@ -89,9 +76,7 @@ This is an example of how to list things you need to use the software and how to
    ```js
    const API_KEY = 'ENTER YOUR API';
    ```
-
-<p align="right">(<a href="#top">back to top</a>)</p>
-
+   
 
 
 <!-- USAGE EXAMPLES -->
@@ -101,8 +86,6 @@ Use this space to show useful examples of how a project can be used. Additional 
 
 _For more examples, please refer to the [Documentation](https://example.com)_
 
-<p align="right">(<a href="#top">back to top</a>)</p>
-
 
 
 <!-- LICENSE -->
@@ -110,18 +93,16 @@ _For more examples, please refer to the [Documentation](https://example.com)_
 
 Distributed under the MIT License. See `LICENSE.txt` for more information.
 
-<p align="right">(<a href="#top">back to top</a>)</p>
-
 
 
 <!-- CONTACT -->
 ## Contact
 
-Your Name - email@email_client.com
+Nick Matthews - nickd.mf7@gmail.com  
+Soma Szabo - [Email]  
+Michael Holm - [Email]
 
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
-
-<p align="right">(<a href="#top">back to top</a>)</p>
+Project Link: [https://github.com/nickmatthews713/blackjai-server](https://github.com/nickmatthews713/blackjai-server)
 
 
 
