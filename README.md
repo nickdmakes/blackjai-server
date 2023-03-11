@@ -3,7 +3,7 @@
 <h1 align="center">blackjai-server</h1>
 
   <p align="center">
-    Responsible for image data preprocessing and game state engine behind BlackJAI system
+    Responsible for image data preprocessing and the game state engine behind BlackJAI system
     <br />
   </p>
 </div>
