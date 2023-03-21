@@ -39,60 +39,60 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
+BlackJAI Server is a python application that inputs a video stream of Black Jack game, preprocesses frames, detects cards, and tracks game state in order to determine most optimal action.
+
+The video stream comes from its neighbor repository, blackjai-capture, whose sole responsibility is to capture footage and broadcast frames over the network.
+
 ### Built With
 
 * Python
+* imagezmq
 * OpenCV
-* roboflow 
-
+* roboflow
 
 
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+#### NOTE: In order to recieve images from blackjai-capture, you will need to be on the same LAN as the BlackJAI Capture device
 
 ### Installation
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+1. Clone the repo and navigate into the directory
    ```sh
-   git clone https://github.com/github_username/repo_name.git
+   git clone https://github.com/nickmatthews713/blackjai-server.git
+   cd blackjai-server
    ```
-3. Install NPM packages
+3. Create a python virtual enviornment and activate
    ```sh
-   npm install
+   python3 -m virtualenv venv
+   source venv/bin/activate
    ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
+4. Install the required python packages
+   ```sh
+   pip install requirements.txt
    ```
-   
-
 
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+### Configure the Server
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+Edit the configuration file **conf.py** to change server settings
 
+### Run the Server
 
+To start the server...
+```sh
+python main.py
+```
 
 <!-- LICENSE -->
 ## License
 
 Distributed under the MIT License. See `LICENSE.txt` for more information.
-
 
 
 <!-- CONTACT -->
