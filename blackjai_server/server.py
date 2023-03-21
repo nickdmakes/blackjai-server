@@ -12,10 +12,10 @@ BlackJAIServer:
 This class is used to start the server and receive images from the publisher.
 """
 class BlackJAIServer:
-    def __init__(self, hostname="127.0.0.1", port=5555):
+    def __init__(self, hostname="127.0.0.1", port=5555, view_mode="view"):
         self.hostname = hostname
         self.port = port
-        self.server = None
+        self.view_mode = view_mode
 
     def start(self):
         receiver = VideoStreamSubscriber(self.hostname, self.port)
@@ -23,26 +23,31 @@ class BlackJAIServer:
         # engine = BlackJAIEngine()
 
         try:
-            while True:
-                # Receive image from publisher
-                msg, frame = receiver.receive(timeout=2)
+            if self.view_mode == "view":
+                while True:
+                    # Receive image from publisher
+                    msg, frame = receiver.receive(timeout=2)
 
-                # Preprocess image
-                # //TODO: Use function from preprocessing.py
+                    # DELETE: temporary code to display image
+                    image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
+                    cv.imshow("Pub Sub Receive", image)
+                    cv.waitKey(1)
+            elif self.view_mode == "process":
+                while True:
+                    # Receive image from publisher
+                    msg, frame = receiver.receive(timeout=2)
 
-                # Detect image
-                # //TODO: Use function from detection.py
+                    # Preprocess image
+                    # //TODO: Use function from preprocessing.py
 
-                # Update engine
-                # //TODO: Use update funtion from engine.py
+                    # Detect image
+                    # //TODO: Use function from detection.py
 
-                # Send UDP message
-                # //TODO: send udp message(s) to BlackJAI-Connect clients
+                    # Update engine
+                    # //TODO: Use update funtion from engine.py
 
-                # DELETE: temporary code to display image
-                image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
-                cv.imshow("Pub Sub Receive", image)
-                cv.waitKey(1)
+                    # Send UDP message
+                    # //TODO: send udp message(s) to BlackJAI-Connect clients
 
         except (KeyboardInterrupt, SystemExit):
             print('Exit due to keyboard interrupt')
