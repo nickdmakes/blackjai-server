@@ -30,7 +30,7 @@ class BlackJAIServer:
 
                     # DELETE: temporary code to display image
                     image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
-                    cv.imshow("Pub Sub Receive", image)
+                    cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
                     cv.waitKey(1)
             elif self.view_mode == "process":
                 while True:
