@@ -28,7 +28,7 @@ class BlackJAIServer:
                     # Receive image from publisher
                     msg, frame = receiver.receive(timeout=2)
 
-                    # DELETE: temporary code to display image
+                    # Display image
                     image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
                     cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
                     cv.waitKey(1)
@@ -36,6 +36,7 @@ class BlackJAIServer:
                 while True:
                     # Receive image from publisher
                     msg, frame = receiver.receive(timeout=2)
+                    image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
 
                     # Preprocess image
                     # //TODO: Use function from preprocessing.py
@@ -48,6 +49,10 @@ class BlackJAIServer:
 
                     # Send UDP message
                     # //TODO: send udp message(s) to BlackJAI-Connect clients
+
+                    # Display image
+                    cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
+                    cv.waitKey(1)
 
         except (KeyboardInterrupt, SystemExit):
             print('Exit due to keyboard interrupt')
