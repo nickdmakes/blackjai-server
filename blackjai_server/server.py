@@ -4,7 +4,9 @@ import cv2 as cv
 import imagezmq
 import threading
 import numpy as np
+from roboflow import Roboflow
 from time import sleep
+from blackjai_server.detection.detect import detect_card_type
 
 
 """
@@ -16,6 +18,11 @@ class BlackJAIServer:
         self.hostname = hostname
         self.port = port
         self.view_mode = view_mode
+
+        # set up API key and project ID for Roboflow
+        RF = Roboflow(api_key="oMR67obQRYqKrFpui4By")
+        PROJECT = RF.workspace().project("playing-cards-ow27d")
+        self.RF_MODEL = PROJECT.version(4).model
 
     def start(self):
         receiver = VideoStreamSubscriber(self.hostname, self.port)
@@ -34,15 +41,16 @@ class BlackJAIServer:
                     cv.waitKey(1)
             elif self.view_mode == "process":
                 while True:
-                    # Receive image from publisher
-                    msg, frame = receiver.receive(timeout=2)
-                    image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
+                    # Receive image from publisher and convert to numpy array
+                    msg, frame = receiver.receive(timeout=4)
+                    image = np.array(cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1))
 
                     # Preprocess image
                     # //TODO: Use function from preprocessing.py
 
                     # Detect image
                     # //TODO: Use function from detection.py
+                    image = detect_card_type(image, self.RF_MODEL)
 
                     # Update engine
                     # //TODO: Use update funtion from engine.py
@@ -99,6 +107,7 @@ class VideoStreamSubscriber:
 
     def close(self):
         self._stop = True
+
 
 # Simulating heavy processing load
 def limit_to_2_fps():
