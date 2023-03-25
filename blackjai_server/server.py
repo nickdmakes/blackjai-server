@@ -19,10 +19,10 @@ class BlackJAIServer:
         self.port = port
         self.view_mode = view_mode
 
-        # set up API key and project ID for Roboflow
-        RF = Roboflow(api_key="oMR67obQRYqKrFpui4By")
-        PROJECT = RF.workspace().project("playing-cards-ow27d")
-        self.RF_MODEL = PROJECT.version(4).model
+        # Fetch model from Roboflow
+        rf = Roboflow(api_key="oMR67obQRYqKrFpui4By")
+        project = rf.workspace().project("playing-cards-ow27d")
+        self.rf_model = project.version(4).model
 
     def start(self):
         receiver = VideoStreamSubscriber(self.hostname, self.port)
@@ -50,7 +50,7 @@ class BlackJAIServer:
 
                     # Detect image
                     # //TODO: Use function from detection.py
-                    image = detect_card_type(image, self.RF_MODEL)
+                    image = detect_card_type(image, self.rf_model)
 
                     # Update engine
                     # //TODO: Use update function from engine.py
