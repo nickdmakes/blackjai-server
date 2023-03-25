@@ -53,7 +53,7 @@ class BlackJAIServer:
                     image = detect_card_type(image, self.RF_MODEL)
 
                     # Update engine
-                    # //TODO: Use update funtion from engine.py
+                    # //TODO: Use update function from engine.py
 
                     # Send UDP message
                     # //TODO: send udp message(s) to BlackJAI-Connect clients
