@@ -1,11 +1,8 @@
-import re
-
-# Contains the model for the counting system (Hi-Lo) for the game of blackjack
+"""
+Contains all the model used in the game of blackjack and for the BlackJAI system
+"""
 
 # A card class that holds the value and suit of a card
-
-DEBUG = True
-
 class Card:
     def __init__(self, value_suit: str):
         str_len = len(value_suit)
@@ -37,7 +34,8 @@ class Card:
         return str(self.value) + " of " + str(self.suit)
 
 
-# A player class that holds the player's hand which contains a set of cards, the player's minimum bet, and the player's current balance
+# A player class that holds the player's hand which contains a set of cards, the player's minimum bet, 
+# and the player's current balance
 class Player:
     def __init__(self, minimum_bet, balance):
         self.hands = []
@@ -167,7 +165,6 @@ class BasicStrategy:
     ]
 
     def __init__(self):
-        # create a lookup table for the basic strategy
         pass
 
     # returns the sum of the cards in a tuple (sum, is_soft)
@@ -233,6 +230,93 @@ class BasicStrategy:
                 # only one card, always hit
                 actions_list.append("Hit")
         return actions_list
+
+
+# The model for the counting systems (Hi-Lo, Omega II, Wong Halves, Zen Count) for the game of blackjack
+class CountingSystems:
+    def __init__(self, num_decks: int):
+        self.num_decks = num_decks
+        self.count_hi_lo = 0
+        self.count_omega_ii = 0
+        self.count_wong_halves = 0
+        self.count_zen_count = 0
+
+    def get_true_count_hi_lo(self, num_decks_remaining) -> float:
+        return self.count_hi_lo / num_decks_remaining
+
+    def get_true_count_omega_ii(self, num_decks_remaining) -> float:
+        return self.count_omega_ii / num_decks_remaining
+
+    def get_true_count_wong_halves(self, num_decks_remaining) -> float:
+        return self.count_wong_halves / num_decks_remaining
+
+    def get_true_count_zen_count(self, num_decks_remaining) -> float:
+        return self.count_zen_count / num_decks_remaining
+
+    def get_bet_multiplier_hi_lo(self, num_decks_remaining) -> float:
+        true_count = self.get_true_count_hi_lo(num_decks_remaining)
+        return max(1, true_count)
+
+    def get_bet_multiplier_omega_ii(self, num_decks_remaining) -> float:
+        true_count = self.get_true_count_omega_ii(num_decks_remaining)
+        return max(1, true_count)
+
+    def get_bet_multiplier_wong_halves(self, num_decks_remaining) -> float:
+        true_count = self.get_true_count_wong_halves(num_decks_remaining)
+        return max(1, true_count)
+
+    def get_bet_multiplier_zen_count(self, num_decks_remaining) -> float:
+        true_count = self.get_true_count_zen_count(num_decks_remaining)
+        return max(1, true_count)
+
+    def set_num_decks(self, num_decks: int):
+        self.num_decks = num_decks
+
+    def update_running_counts(self, card: Card):
+        card_val = card.get_value()
+        # Hi-Lo
+        if (card_val <= 6):
+            self.count_hi_lo += 1
+        elif (card_val >= 10):
+            self.count_hi_lo -= 1
+
+        # Omega II
+        if (card_val == 2 or card_val == 3 or card_val == 7):
+            self.count_omega_ii += 1
+        elif (card_val >= 4 and card_val <= 6):
+            self.count_omega_ii += 2
+        elif (card_val == 9):
+            self.count_omega_ii -= 1
+        elif (card_val == 10):
+            self.count_omega_ii -= 2
+
+        # Wong Halves
+        if (card_val == 2 or card_val == 7):
+            self.count_wong_halves += 0.5
+        elif (card_val == 3 or card_val == 4 or card_val == 6):
+            self.count_wong_halves += 1
+        elif (card_val == 5):
+            self.count_wong_halves += 1.5
+        elif (card_val == 9):
+            self.count_wong_halves -= 0.5
+        elif (card_val == 10 or card_val == 11):
+            self.count_wong_halves -= 1
+
+        # Zen Count
+        if (card_val == 2 or card_val == 3 or card_val == 7):
+            self.count_zen_count += 1
+        elif (card_val >= 4 and card_val <= 6):
+            self.count_zen_count += 2
+        elif (card_val == 10):
+            self.count_zen_count -= 2
+        elif (card_val == 11):
+            self.count_zen_count -= 1
+
+    def reset_running_counts(self):
+        self.count_hi_lo = 0
+        self.count_omega_ii = 0
+        self.count_wong_halves = 0
+        self.count_zen_count = 0
 
 
 def test1(bs: BasicStrategy):
