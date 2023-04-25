@@ -72,6 +72,16 @@ class Player:
             raise Exception("Hand index out of range")
         self.hands[hand_index].append(card)
 
+    def split_cards_in_hand(self, hand_index: int):
+        if (hand_index >= len(self.hands)):
+            raise Exception("Hand index out of range")
+        if (len(self.hands[hand_index]) != 2):
+            raise Exception("Hand does not contain 2 cards")
+        if (self.hands[hand_index][0].get_value() != self.hands[hand_index][1].get_value()):
+            raise Exception("Cards in hand are not the same value")
+        card = self.hands[hand_index].pop()
+        self.add_hand([card])
+
     def remove_hand(self, hand_index: int):
         if (hand_index >= len(self.hands)):
             raise Exception("Hand index out of range")
@@ -108,8 +118,8 @@ class BasicStrategy:
     # Define the dealer's up card index offset
     DEALER_OFFSET = 2
 
-    # Dealer's up card on rows starting from 2 to A (including 10) [0:9]
-    # Player's hand on columns starting from 7 to 17 (Anything below a 7 is a Hit (H_). Anything above 17 is a Stand (S_).) [0:10]
+    # Dealer's up card per column starting from 2 to A (including 10) [0:9]
+    # Player's hand per row starting from 7 to 17 (Anything below a 7 is a Hit (H_). Anything above 17 is a Stand (S_).) [0:10]
     BASIC_STRATEGY_HARD = [
         #          2,           3,           4,           5,           6,           7,           8,           9,          10,           A
         [ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_]],  # 7 or less
@@ -125,8 +135,8 @@ class BasicStrategy:
         [ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_]]   # 17 or more
     ]
 
-    # Dealer's up card on rows starting from 2 to A (including 10) [0:9]
-    # Player's hand on columns starting from 13 to 21 (Anything below a 13 is a Hit (H_).) [0:8]
+    # Dealer's up card per column starting from 2 to A (including 10) [0:9]
+    # Player's hand per row starting from 13 to 21 (Anything below a 13 is a Hit (H_).) [0:8]
     BASIC_STRATEGY_SOFT = [
         #          2,           3,           4,           5,           6,           7,           8,           9,          10,           A
         [ACTIONS[H_], ACTIONS[H_], ACTIONS[DH], ACTIONS[DH], ACTIONS[DH], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_]],  # 13
@@ -140,8 +150,8 @@ class BasicStrategy:
         [ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_], ACTIONS[S_]]   # 21
     ]
 
-    # Dealer's up card on rows starting from 2 to A (including 10) [0:9]
-    # Player's hand on columns starting from (2,2), (3,3), etc. to (A,A) (including 10) [0:9]
+    # Dealer's up card per column starting from 2 to A (including 10) [0:9]
+    # Player's hand per row starting from (2,2), (3,3), etc. to (A,A) (including 10) [0:9]
     BASIC_STRATEGY_PAIRS = [
         #          2,           3,           4,           5,           6,           7,           8,           9,          10,           A
         [ACTIONS[PH], ACTIONS[P_], ACTIONS[P_], ACTIONS[P_], ACTIONS[P_], ACTIONS[P_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_], ACTIONS[H_]],  # 2,2
@@ -179,55 +189,53 @@ class BasicStrategy:
                 ace_high_count -= 1
         return (sum, ace_high_count > 0)
 
-    def get_action(self, player: Player, dealer_card: Card) -> str:
-        # TODO handle split hands after split is done...
-
-        hands = player.get_hands()
-        hand0_cards = hands[0]
-        num_cards = len(hand0_cards)
-
-        # get the sum of the player's cards and determine if it's a soft hand
-        cards_sum, is_soft = self.sum_cards(hand0_cards)
-
-        if (cards_sum > 21):
-            return "Bust"
-        elif ((cards_sum == 21) and (num_cards == 2)):
-            return "Blackjack!"
-        else:
+    # returns a list of actions to take for each hand
+    def get_action(self, player: Player, dealer_card: Card) -> list[str]:
+        actions_list = []
+        # handle split cards by iterating through each hand and getting the action
+        for i in range(player.get_num_hands()):
+            cur_hand = player.get_hand(i)
+            num_cards = len(cur_hand)
             dealer_idx = dealer_card.get_value() - self.DEALER_OFFSET
-            # determine if hard or soft hand or if pair
-            if (num_cards == 2 and (hand0_cards[0].get_value() == hand0_cards[1].get_value())):
+
+            # get the sum of the player's cards and determine if it's a soft hand
+            cards_sum, is_soft = self.sum_cards(cur_hand)
+
+            if (cards_sum > 21):
+                if (is_soft):
+                    actions_list.append("ERROR: Soft hand over 21")
+                else:
+                    actions_list.append("Bust")
+            elif ((cards_sum == 21) and (num_cards == 2)):
+                actions_list.append("Blackjack!")
+            elif ((num_cards == 2) and (cur_hand[0].get_value() == cur_hand[1].get_value())):
                 # pair
                 PLAYER_OFFSET = 2
-                player_idx = hand0_cards[0].get_value() - PLAYER_OFFSET
-                return self.BASIC_STRATEGY_PAIRS[dealer_idx][player_idx]
-            elif (num_cards == 2 and is_soft):
+                player_idx = cur_hand[0].get_value() - PLAYER_OFFSET
+                actions_list.append(self.BASIC_STRATEGY_PAIRS[player_idx][dealer_idx])
+            elif ((num_cards >= 2) and is_soft):
                 # soft hand
                 PLAYER_OFFSET = 13
                 player_idx = cards_sum - PLAYER_OFFSET
-                return self.BASIC_STRATEGY_SOFT[dealer_idx][player_idx]
-            elif (num_cards == 2):
+                actions_list.append(self.BASIC_STRATEGY_SOFT[player_idx][dealer_idx])
+            elif (num_cards >= 2):
                 # hard hand
                 PLAYER_OFFSET = 7
                 player_idx = cards_sum - PLAYER_OFFSET
-                # check if player has less than a 7 hand
                 if (player_idx < 0):
-                    # will always hit
+                    # if player has less than a 7 hand, always hit
                     player_idx = 0
-
-                # check is player has more than a 17 hand
                 if (player_idx > 10):
-                    # will always stand
+                    # if player has more than a 17 hand, always stand
                     player_idx = 10
+                actions_list.append(self.BASIC_STRATEGY_HARD[player_idx][dealer_idx])
+            else:
+                # only one card, always hit
+                actions_list.append("Hit")
+        return actions_list
 
-                return self.BASIC_STRATEGY_HARD[dealer_idx][player_idx]
-            elif (num_cards > 2):
-                # TODO handle 2+ cards in player's hand
-                print("TODO: handle 2+ cards in player's hand")
-                pass
 
-
-def test1():
+def test1(bs: BasicStrategy):
     dealer = Card("KS")
     player1 = Player(1, 10)
     player2 = Player(1, 10)
@@ -238,13 +246,13 @@ def test1():
     player1.add_hand(player1_hand1)
     player2.add_hand(player2_hand1)
 
-    bs = BasicStrategy()
     print(bs.get_action(player1, dealer))
     print(bs.get_action(player2, dealer))
 
 
 if __name__ == "__main__":
     # test the models
-    test1()
+    bs = BasicStrategy()
+    test1(bs)
     
     print("Done")
