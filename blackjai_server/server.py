@@ -6,6 +6,7 @@ import threading
 import numpy as np
 from roboflow import Roboflow
 from time import sleep
+import datetime
 from blackjai_server.detection.detect import detect_card_type
 
 
@@ -22,7 +23,7 @@ class BlackJAIServer:
         # Fetch model from Roboflow
         rf = Roboflow(api_key="oMR67obQRYqKrFpui4By")
         project = rf.workspace().project("playing-cards-ow27d")
-        self.rf_model = project.version(4).model
+        self.rf_model = project.version(1).model
 
     def start(self):
         receiver = VideoStreamSubscriber(self.hostname, self.port)
@@ -61,6 +62,43 @@ class BlackJAIServer:
                     # Display image
                     cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
                     cv.waitKey(1)
+            elif self.view_mode == "picture":
+                # Receive image from publisher and convert to numpy array
+                msg, frame = receiver.receive(timeout=4)
+                image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
+                print(image)
+                # Get datetime
+                now = datetime.datetime.now()
+                # save image to disk with name as datetime
+                print("saving")
+                cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
+                cv.waitKey(0)
+                success = cv.imwrite(f"./BlackJAI/dev/blackjai-server/blackjai_server/data/pictures/{now.strftime('%Y_%m_%d__%H_%M_%S')}.jpg", image)
+                print(success)
+            elif self.view_mode == "timed_video":
+                # Receive image from publisher and convert to numpy array
+                msg, frame = receiver.receive(timeout=4)
+                image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
+                # Get size of image
+                height, width, layers = image.shape
+                # Set timer using datetime
+                start_time = datetime.datetime.now()
+                # Create video writer
+                result = cv.VideoWriter(f"./BlackJAI/dev/blackjai-server/blackjai_server/data/videos/{start_time.strftime('%Y_%m_%d__%H_%M_%S')}.avi", cv.VideoWriter_fourcc(*'MJPG'), 10, (width, height))
+                while True:
+                    # Receive image from publisher and convert to numpy array
+                    msg, frame = receiver.receive(timeout=4)
+                    image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
+                    # Write image to video
+                    result.write(image)
+                    # Display image
+                    # if it has been 10 seconds, break
+                    if (datetime.datetime.now() - start_time).seconds >= 20:
+                        break
+                    cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
+                    cv.waitKey(100)
+                # Release video
+                result.release()
 
         except (KeyboardInterrupt, SystemExit):
             print('Exit due to keyboard interrupt')
