@@ -16,4 +16,3 @@ class BlackJAIState:
         self.player_two = Player(minimum_bet=5)
         self.dealer_card = None
         self.count_systems = CountingSystems(num_decks=1)
-        

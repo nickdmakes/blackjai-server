@@ -5,6 +5,4 @@ class BlackJAIEngine:
         self.state = BlackJAIState()
 
     def update(self, image_data):
-        # TODO: Break image into 3 sections. One for each player and one for the dealer.
-        
-        # TODO: Use the image data to update the state of the game.
+       print("None")
