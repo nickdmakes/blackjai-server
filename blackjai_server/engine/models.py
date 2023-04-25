@@ -34,13 +34,11 @@ class Card:
         return str(self.value) + " of " + str(self.suit)
 
 
-# A player class that holds the player's hand which contains a set of cards, the player's minimum bet, 
-# and the player's current balance
+# A player class that holds the player's hand which contains a set of cards, the player's minimum bet
 class Player:
-    def __init__(self, minimum_bet, balance):
+    def __init__(self, minimum_bet):
         self.hands = []
         self.minimum_bet = minimum_bet
-        self.balance = balance
 
     def get_num_hands(self):
         return len(self.hands)
@@ -55,9 +53,6 @@ class Player:
 
     def get_minimum_bet(self):
         return self.minimum_bet
-
-    def get_balance(self):
-        return self.balance
 
     def add_hand(self, hand: list[Card]):
         if (len(self.hands) == 0):
@@ -88,11 +83,8 @@ class Player:
     def reset_hands(self):
         self.hands = []
 
-    def update_balance(self, amount):
-        self.balance += amount
-
     def __str__(self):
-        return "Cards: " + str(self.hands) + "\nMinimum Bet: " + str(self.minimum_bet) + "\nBalance: " + str(self.balance)
+        return "Cards: " + str(self.hands) + "\nMinimum Bet: " + str(self.minimum_bet)
 
 
 # The model for the optimal strategy for the game of blackjack (basic strategy)
@@ -321,8 +313,8 @@ class CountingSystems:
 
 def test1(bs: BasicStrategy):
     dealer = Card("KS")
-    player1 = Player(1, 10)
-    player2 = Player(1, 10)
+    player1 = Player(1)
+    player2 = Player(1)
 
     player1_hand1 = [Card("2H"), Card("10D")]
     player2_hand1 = [Card("5C"), Card("AH")]
