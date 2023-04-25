@@ -26,4 +26,4 @@ def detect_card_type(image, model):
             cv.rectangle(image, (x1, y1), (x2, y2), (0, 0, 255), 2)
             cv.putText(image, card_type, (x1, y1 - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
         # print()
-    return image
+    return image, json_data

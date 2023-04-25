@@ -8,6 +8,7 @@ from roboflow import Roboflow
 from time import sleep
 import datetime
 from blackjai_server.detection.detect import detect_card_type
+from blackjai_server.engine.engine import BlackJAIEngine
 
 
 """
@@ -27,8 +28,7 @@ class BlackJAIServer:
 
     def start(self):
         receiver = VideoStreamSubscriber(self.hostname, self.port)
-        # //TODO: instantiate engine
-        # engine = BlackJAIEngine()
+        engine = BlackJAIEngine()
 
         try:
             if self.view_mode == "view":
@@ -51,10 +51,11 @@ class BlackJAIServer:
 
                     # Detect image
                     # //TODO: Use function from detection.py
-                    image = detect_card_type(image, self.rf_model)
+                    image, json_data = detect_card_type(image, self.rf_model)
 
                     # Update engine
                     # //TODO: Use update function from engine.py
+                    engine.update(json_data)
 
                     # Send UDP message
                     # //TODO: send udp message(s) to BlackJAI-Connect clients

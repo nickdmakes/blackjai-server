@@ -6,6 +6,8 @@ Contains all the model used in the game of blackjack and for the BlackJAI system
 class Card:
     def __init__(self, value_suit: str):
         str_len = len(value_suit)
+        if (str_len < 2):
+            raise Exception("Card value and suit must be at least 2 characters long")
         self.value = str(value_suit[0])
         self.suit = str(value_suit[1:str_len])
         # Check if the card is a 10
@@ -24,6 +26,9 @@ class Card:
     def get_suit(self):
         return self.suit
 
+    def get_value_suit(self):
+        return self.value + self.suit
+
     def set_value(self, value: str):
         self.value = value
 
@@ -32,6 +37,46 @@ class Card:
 
     def __str__(self):
         return str(self.value) + " of " + str(self.suit)
+
+
+# A class for the queue object. Contains a tuple of: (card location, card, confidence level)
+# Frames will output multiple of these objects
+class CardInfo():
+    def __init__(self, location, card: Card, confidence):
+        self.location = location
+        self.card = card
+        self.confidence = confidence
+
+    def get_location(self):
+        return self.location
+
+    def get_card(self) -> Card:
+        return self.card
+
+    def get_confidence(self):
+        return self.confidence
+
+    def set_location(self, location):
+        self.location = location
+
+    def set_card(self, card: Card):
+        self.card = card
+
+    def set_confidence(self, confidence):
+        self.confidence = confidence
+
+    # returns the location difference between this card and another card
+    def get_loc_diff(self, card_info):
+        return abs(self.location[0] - card_info.location[0]) + abs(self.location[1] - card_info.location[1])
+    
+    def avg_card_infos(self, card_info):
+        return CardInfo(((self.location[0] + card_info.location[0]) / 2, (self.location[1] + card_info.location[1]) / 2), self.card, (self.confidence + card_info.confidence) / 2)
+
+    def __str__(self):
+        return str(self.location) + " " + str(self.card) + " " + str(self.confidence)
+    
+    def __repr__(self):
+        return str(self.location) + " " + str(self.card) + " " + str(self.confidence)
 
 
 # A player class that holds the player's hand which contains a set of cards, the player's minimum bet
@@ -330,5 +375,4 @@ if __name__ == "__main__":
     # test the models
     bs = BasicStrategy()
     test1(bs)
-    
     print("Done")
