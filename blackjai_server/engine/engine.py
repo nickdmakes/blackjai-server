@@ -1,13 +1,13 @@
 import sys
 
-from state import BlackJAIState, SHUFFLE_PHASE, DEAL_PHASE, TURN_PHASE
-from models import Card, CardInfo
+from blackjai_server.engine.state import BlackJAIState, SHUFFLE_PHASE, DEAL_PHASE, TURN_PHASE
+from blackjai_server.engine.models import Card, CardInfo
 
 DEBUG = True
 
-
 class BlackJAIEngine:
-    def __init__(self, num_players=2, buffer_size=20, thresh_same_card=250, thresh_card_moving=150, thresh_card_cluster=400):
+    def __init__(self, frame_size: tuple[int, int], num_players=2, buffer_size=20, thresh_same_card=300, thresh_card_moving=150, thresh_card_cluster=500):
+        self.frame_size = frame_size
         self.num_players = num_players
         self.state = BlackJAIState(num_players)
         self.buffer_size = buffer_size
@@ -26,17 +26,20 @@ class BlackJAIEngine:
                 self.state.set_phase(DEAL_PHASE)
                 print("Shuffle phase complete. Deal phase started.") if DEBUG else None
         elif (self.state.get_phase() == DEAL_PHASE):
-            # determine when 5 distinct cards are not moving anymore
+            # determine when 5 distinct cards are not moving anymore (buffer 80% full)
             avg_card_locs = self.frame_card_info_queues.get_avg_locs(self.thresh_card_moving)
             if (len(avg_card_locs) >= (self.num_players * 2 + 1)):
                 # segment cards into number of players + dealer piles
                 hands = self._cluster_cards(avg_card_locs)
-                player_num = 0
                 for i in range(len(hands)):
                     hand = hands[i]
                     if (len(hand) == 2):
-                        self.state.add_hand_to_player(player_num, hand)
-                        player_num += 1
+                        # Assign hand to player based on location of cluster
+                        quadrant = self._get_card_loc_quadrant(hand[0])
+                        if(quadrant == 4):
+                            self.state.add_hand_to_player(0, hand)
+                        elif (quadrant == 3):
+                            self.state.add_hand_to_player(1, hand)
                     elif (len(hand) == 1):
                         self.state.set_dealer_card(hand[0].get_card())
                     else:
@@ -45,10 +48,29 @@ class BlackJAIEngine:
                 print("Deal phase complete. Turn phase started.") if DEBUG else None
         elif (self.state.get_phase() == TURN_PHASE):
             # TODO 
-            pass
+
+            if (self.frame_card_info_queues.is_empty()):
+                self.state.set_phase(SHUFFLE_PHASE)
+                print("Turn phase complete. Shuffle phase started.") if DEBUG else None
         else:
-            # nothing (error)
-            pass
+            print("ERROR: Invalid phase. In BlackJAIEngine.update()")
+
+    # Given a CardInfo object, returns the quadrant of the card based on its location.
+    # Quadrants are numbered 1-4 starting from the top left and going clockwise.
+    def _get_card_loc_quadrant(self, card_info: CardInfo):
+        x = card_info.get_location()[0]
+        y = card_info.get_location()[1]
+        if (x < self.frame_size[0] / 2):
+            if (y < self.frame_size[1] / 2):
+                return 1
+            else:
+                return 3
+        else:
+            if (y < self.frame_size[1] / 2):
+                return 2
+            else:
+                return 4
+    
 
     # Clusters the cards into piles for each player and the dealer.
     # Returns a 2D list of CardInfo where each row is a player's or dealer's hand.
@@ -100,17 +122,24 @@ class BlackJAIEngine:
                     card_dict[card_type].append(cur_card_info)
         # find same cards labeled multiple times in card_dict
         # average their coordinates and confidence to get 1 card label per card type (key) in card_dict
-        for card_info_list in card_dict.values():
-            if (len(card_info_list) > 1):
-                # find card labels that are close enough
-                for i in range(len(card_info_list)):
-                    for j in range(i + 1, len(card_info_list)):
-                        if (card_info_list[i].get_loc_diff(card_info_list[j]) < self.thresh_same_card):
-                            # average coordinates and confidence
-                            card_info_list[i] = card_info_list[i].avg_card_infos(card_info_list[j])
-                            # remove the card that was averaged
-                            card_info_list.pop(j)
-                            j -= 1
+        # for card_info_list in card_dict.values():
+        #     if (len(card_info_list) > 1):
+        #         # find card labels that are close enough
+        #         for i in range(len(card_info_list)):
+        #             if ((i + 1) >= len(card_info_list)):
+        #                 break
+        #             for j in range(i + 1, len(card_info_list)):
+        #                 if (card_info_list[i].get_loc_diff(card_info_list[j]) < self.thresh_same_card):
+        #                     # average coordinates and confidence
+        #                     card_info_list[i] = card_info_list[i].avg_card_infos(card_info_list[j])
+        #                     # remove the card that was averaged
+        #                     card_info_list.pop(j)
+        #                     j -= 1
+        # self.frame_card_info_queues.add(card_dict)
+
+        # for each key in card_dict, 
+        for key in card_dict.keys():
+            card_dict[key] = [card_dict[key][0]]
         self.frame_card_info_queues.add(card_dict)
 
 
@@ -121,6 +150,8 @@ class CardInfoQueues:
 
     def __init__(self, buffer_size=20):
         self.buffer_size = buffer_size
+        # buffer must be 80% full to get final average location and put in players hand after 
+        self.thresh_num_card_infos_full = buffer_size - int((0.2 * buffer_size))
         self.dict = {
             # 2
             "2C": [],
@@ -262,7 +293,7 @@ class CardInfoQueues:
                 sum_loc_x += loc[0]
                 sum_loc_y += loc[1]
         # return average location if there are enough card infos, otherwise return None
-        if (num_cards >= self.THRESH_NUM_CARD_INFOS):
+        if (num_cards >= self.thresh_num_card_infos_full):
             return (int(sum_loc_x / num_cards), int(sum_loc_y / num_cards))
         return None
 

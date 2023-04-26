@@ -28,7 +28,7 @@ class BlackJAIServer:
 
     def start(self):
         receiver = VideoStreamSubscriber(self.hostname, self.port)
-        engine = BlackJAIEngine()
+        engine = BlackJAIEngine(frame_size=(1280, 720), buffer_size=10)
 
         try:
             if self.view_mode == "view":
@@ -38,6 +38,18 @@ class BlackJAIServer:
 
                     # Display image
                     image = cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1)
+                    cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
+                    cv.waitKey(1)
+            elif self.view_mode == "detect":
+                while True:
+                    # Receive image from publisher and convert to numpy array
+                    msg, frame = receiver.receive(timeout=4)
+                    image = np.array(cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1))
+
+                    # Detect image
+                    image, json_data = detect_card_type(image, self.rf_model)
+
+                    # Display image
                     cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
                     cv.waitKey(1)
             elif self.view_mode == "process":

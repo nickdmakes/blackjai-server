@@ -1,7 +1,7 @@
 # State object for the game engine
 
 # import the player class
-from models import Player, Card, CountingSystems
+from blackjai_server.engine.models import Player, Card, CountingSystems
 
 # Phases of the game
 SHUFFLE_PHASE = "shuffle"
