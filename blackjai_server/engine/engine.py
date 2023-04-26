@@ -63,10 +63,9 @@ class BlackJAIEngine:
                 # check if card is close enough to any of the cards in the hand
                 for j in range(len(hand)):
                     card_info = hand[j]
-                    new_card_info = CardInfo(card_location, Card(key), 1)
-                    if (card_info.get_loc_diff(new_card_info) < self.thresh_card_cluster):
+                    if (self._get_loc_diff(card_info.get_location(), card_location) < self.thresh_card_cluster):
                         # add card to hand
-                        hand.append(new_card_info)
+                        hand.append(CardInfo(card_location, Card(key), 1))
                         appended = True
                         break
             # if not close enough or did not enter for loop, add card to new hand
@@ -77,7 +76,7 @@ class BlackJAIEngine:
         return hands
 
     # returns the location difference between 2 locations
-    def _get_loc_diff(loc1: tuple[int, int], loc2: tuple[int, int]):
+    def _get_loc_diff(self, loc1: tuple[int, int], loc2: tuple[int, int]):
         return abs(loc1[0] - loc2[0]) + abs(loc1[1] - loc2[1])
 
     def _update_card_info_queues(self, json_data):

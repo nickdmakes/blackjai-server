@@ -47,7 +47,7 @@ class CardInfo():
         self.card = card
         self.confidence = confidence
 
-    def get_location(self):
+    def get_location(self) -> tuple[int, int]:
         return self.location
 
     def get_card(self) -> Card:
