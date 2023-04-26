@@ -1,29 +1,43 @@
+import sys
+
 from state import BlackJAIState, SHUFFLE_PHASE, DEAL_PHASE, TURN_PHASE
 from models import Card, CardInfo
 
+DEBUG = True
 
 class BlackJAIEngine:
-    def __init__(self, buffer_size=20, threshold_same_card=250):
-        self.state = BlackJAIState()
+    def __init__(self, num_players=2, buffer_size=20, thresh_same_card=250, thresh_card_moving=150):
+        self.num_players = num_players
+        self.state = BlackJAIState(num_players)
         self.buffer_size = buffer_size
-        self.threshold_same_card = threshold_same_card
+        # threshold for card location difference to determine if 2 card labels are the same
+        self.thresh_same_card = thresh_same_card
+        # threshold for card location difference to determine if 1 card is moving
+        self.thresh_card_moving = thresh_card_moving
         self.frame_card_info_queues = CardInfoQueues(buffer_size)
 
     def update(self, json_data):
         self._update_card_info_queues(json_data)
-        # TODO: update state based on card info queues
-        if (self.state == SHUFFLE_PHASE):
+        # handle state changes
+        if (self.state.get_phase() == SHUFFLE_PHASE):
             if (not self.frame_card_info_queues.is_empty()):
-                self.state = DEAL_PHASE
-        elif (self.state == DEAL_PHASE):
+                self.state.set_phase(DEAL_PHASE)
+                print("Shuffle phase complete. Deal phase started.") if DEBUG else None
+        elif (self.state.get_phase() == DEAL_PHASE):
             # determine when 5 distinct cards are not moving anymore
-
-            # put final cards in player's hands
-            pass
-        elif (self.state == TURN_PHASE):
+            avg_card_locs = self.frame_card_info_queues.get_avg_locs()
+            if (len(avg_card_locs) >= (self.num_players * 2 + 1)):
+                # have 5 distinct non moving cards
+                # TODO segment cards into number of players + dealer piles
+                
+                
+                self.state.set_phase(TURN_PHASE)
+                print("Deal phase complete. Turn phase started.") if DEBUG else None
+        elif (self.state.get_phase() == TURN_PHASE):
+            # TODO 
             pass
         else:
-            # nothing
+            # nothing (error)
             pass
 
     def _update_card_info_queues(self, json_data):
@@ -46,24 +60,26 @@ class BlackJAIEngine:
                 else:
                     card_dict[card_type].append(cur_card_info)
         # find same cards labeled multiple times in card_dict
-        # average their coordinates and confidence to get 1 card per card type (key) in card_dict
-        for key in card_dict:
-            cards = card_dict[key]
-            if (len(cards) > 1):
-                # find cards that are close enough
-                for i in range(len(cards)):
-                    for j in range(i + 1, len(cards)):
-                        if (cards[i].get_loc_diff(cards[j]) < self.threshold_same_card):
+        # average their coordinates and confidence to get 1 card label per card type (key) in card_dict
+        for card_info_list in card_dict.values():
+            if (len(card_info_list) > 1):
+                # find card labels that are close enough
+                for i in range(len(card_info_list)):
+                    for j in range(i + 1, len(card_info_list)):
+                        if (card_info_list[i].get_loc_diff(card_info_list[j]) < self.thresh_same_card):
                             # average coordinates and confidence
-                            cards[i] = cards[i].avg_card_infos(cards[j])
+                            card_info_list[i] = card_info_list[i].avg_card_infos(card_info_list[j])
                             # remove the card that was averaged
-                            cards.pop(j)
+                            card_info_list.pop(j)
                             j -= 1
         self.frame_card_info_queues.add(card_dict)
 
 
 # A dictionary class with keys as playing cards and values as a queue of CardInfo objects
 class CardInfoQueues:
+    # threshold for number of card infos in the queue for a card type
+    THRESH_NUM_CARD_INFOS = 3
+
     def __init__(self, buffer_size=20):
         self.buffer_size = buffer_size
         self.dict = {
@@ -134,7 +150,8 @@ class CardInfoQueues:
             "AS": [],
         }
 
-    def add(self, card_info: dict[str: CardInfo]):
+    # Adds the given card infos to the queue otherwise adds None to all keys
+    def add(self, card_info: dict[str, list[CardInfo]]):
         # shift all queues to the left
         for key in self.dict:
             if (len(self.dict[key]) >= self.buffer_size):
@@ -143,30 +160,98 @@ class CardInfoQueues:
             if (key not in card_info):
                 self.dict[key].append(None)
             else:
-                self.dict[key].append(card_info[key])
+                if (len(card_info[key]) > 1):
+                    print("ERROR: more than 1 card info in card_info dict. In CardInfoQueues.add()")
+                elif (len(card_info[key]) == 1):
+                    self.dict[key].append(card_info[key][0])
 
     def get(self, card_type: str) -> list[CardInfo]:
         return self.dict[card_type]
 
-    def is_card_moving(self, card_type: str, threshold_card_moving) -> bool:
-        # if all locations are close enough, then the card is not moving
-        return all(self.dict[card_type][i].get_loc_diff(self.dict[card_type][i + 1]) < threshold_card_moving for i in range(len(self.dict[card_type]) - 1))
+    # returns true if the card is moving
+    def is_card_moving(self, card_type: str, thresh_card_moving) -> bool:
+        avg_card_loc = self.get_avg_loc(card_type, thresh_card_moving)
+        if (avg_card_loc is None):
+            return True
+        return False
 
-    # returns the maximum location difference between all card infos in the queue
-    def _get_max_loc_diff(self, card_type: str):
-        # TODO
-        loc_diff = self.dict[card_type][0].get_loc_diff(self.dict[card_type][1])
-        for i in range(1, len(self.dict[card_type]) - 1):
-            loc_diff = max(loc_diff, self.dict[card_type][i].get_loc_diff(self.dict[card_type][i + 1]))
-        return loc_diff
+    # returns the maximum x and y component difference in the queue for the given card type
+    def get_max_loc_diff(self, card_type: str):
+        # initialize to max int and 0
+        x_max = 0
+        x_min = sys.maxsize
+        y_max = 0
+        y_min = sys.maxsize
+        num_cards = 0
 
+        # find max and min x and y
+        for card_info in self.dict[card_type]:
+            if (card_info is not None):
+                num_cards += 1
+                loc = card_info.get_location()
+                # x
+                if (loc[0] > x_max):
+                    x_max = loc[0]
+                elif (loc[0] < x_min):
+                    x_min = loc[0]
+                # y
+                if (loc[1] > y_max):
+                    y_max = loc[1]
+                elif (loc[1] < y_min):
+                    y_min = loc[1]
+        return (x_max - x_min, y_max - y_min) if (num_cards >= self.THRESH_NUM_CARD_INFOS) else None
+
+    # Returns the average location of the card type if there are enough card infos in the queue
+    # AND if the card is not moving. Otherwise returns None.
+    def get_avg_loc(self, card_type: str, thresh_card_moving):
+        sum_loc_x = 0
+        sum_loc_y = 0
+        num_cards = 0
+
+        for card_info in self.dict[card_type]:
+            if (card_info is not None):
+                loc = card_info.get_location()
+                # check if card is moving
+                if (num_cards >= 1):
+                    avg_loc_x = sum_loc_x / num_cards
+                    avg_loc_y = sum_loc_y / num_cards
+                    diff = abs(loc[0] - avg_loc_x) + abs(loc[1] - avg_loc_y)
+                    if (diff > thresh_card_moving):
+                        # card is moving, return None
+                        return None
+                num_cards += 1
+                sum_loc_x += loc[0]
+                sum_loc_y += loc[1]
+        # return average location if there are enough card infos, otherwise return None
+        if (num_cards >= self.THRESH_NUM_CARD_INFOS):
+            return (sum_loc_x / num_cards, sum_loc_y / num_cards)
+        return None
+
+    # returns a dictionary of the average locations for non moving cards
+    def get_avg_locs(self, thresh_card_moving):
+        avg_locs = {}
+        for card_type in self.dict:
+            loc = self.get_avg_loc(card_type, thresh_card_moving)
+            if (loc is not None):
+                avg_locs[card_type] = loc
+        return avg_locs
+
+    # if the entire queue contain only None or length == 0, then the key is empty
+    # also mark as empty if THRESH_NUM_CARD_INFOS or less card infos in queue
     def is_key_empty(self, card_type: str) -> bool:
-        # if the entire queue contain only None, then the key is empty
-        return all(card_info is None for card_info in self.dict[card_type]) or len(self.dict[card_type]) == 0
+        if (all(card_info is None for card_info in self.dict[card_type]) or (len(self.dict[card_type]) == 0)):
+            return True
+        card_info_count = 0
+        for card_info in self.dict[card_type]:
+            if (card_info is not None):
+                card_info_count += 1
+                if (card_info_count >= self.THRESH_NUM_CARD_INFOS):
+                    return False
+        return True
 
-    # returns true if all keys are empty (aka all queues contain only None or empty)
+    # returns true if all keys are empty 
+    # AKA: all queues contain only None or empty or have less than THRESH_NUM_CARD_INFOS card infos
     def is_empty(self) -> bool:
-        # if all keys are empty, then the dictionary is empty
         return all(self.is_key_empty(card_type) for card_type in self.dict)
 
     def __str__(self):

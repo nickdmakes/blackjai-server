@@ -42,7 +42,7 @@ class Card:
 # A class for the queue object. Contains a tuple of: (card location, card, confidence level)
 # Frames will output multiple of these objects
 class CardInfo():
-    def __init__(self, location, card: Card, confidence):
+    def __init__(self, location: tuple[int, int], card: Card, confidence):
         self.location = location
         self.card = card
         self.confidence = confidence
@@ -56,7 +56,7 @@ class CardInfo():
     def get_confidence(self):
         return self.confidence
 
-    def set_location(self, location):
+    def set_location(self, location: tuple[int, int]):
         self.location = location
 
     def set_card(self, card: Card):
@@ -69,19 +69,22 @@ class CardInfo():
     def get_loc_diff(self, card_info):
         return abs(self.location[0] - card_info.location[0]) + abs(self.location[1] - card_info.location[1])
     
+    # returns the average location and confidence between this card and another card (must be the same card)
     def avg_card_infos(self, card_info):
+        if (self.card.get_value_suit() != card_info.card.get_value_suit()):
+            raise Exception("CardInfo objects must be the same card")
         return CardInfo(((self.location[0] + card_info.location[0]) / 2, (self.location[1] + card_info.location[1]) / 2), self.card, (self.confidence + card_info.confidence) / 2)
 
     def __str__(self):
-        return str(self.location) + " " + str(self.card) + " " + str(self.confidence)
+        return "(" + str(self.location) + " " + str(self.card) + " " + str(self.confidence) + ")"
     
     def __repr__(self):
-        return str(self.location) + " " + str(self.card) + " " + str(self.confidence)
+        return "(" + str(self.location) + " " + str(self.card) + " " + str(self.confidence) + ")"
 
 
 # A player class that holds the player's hand which contains a set of cards, the player's minimum bet
 class Player:
-    def __init__(self, minimum_bet):
+    def __init__(self, minimum_bet=1):
         self.hands = []
         self.minimum_bet = minimum_bet
 
@@ -271,7 +274,7 @@ class BasicStrategy:
 
 # The model for the counting systems (Hi-Lo, Omega II, Wong Halves, Zen Count) for the game of blackjack
 class CountingSystems:
-    def __init__(self, num_decks: int):
+    def __init__(self, num_decks=1):
         self.num_decks = num_decks
         self.count_hi_lo = 0
         self.count_omega_ii = 0
