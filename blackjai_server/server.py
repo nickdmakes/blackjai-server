@@ -59,18 +59,17 @@ class BlackJAIServer:
                     image = np.array(cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1))
 
                     # Preprocess image
-                    # //TODO: Use function from preprocessing.py
+                    # TODO: Use function from preprocessing.py
 
                     # Detect image
-                    # //TODO: Use function from detection.py
                     image, json_data = detect_card_type(image, self.rf_model)
 
                     # Update engine
-                    # //TODO: Use update function from engine.py
+                    # TODO: Use update function from engine.py
                     engine.update(json_data)
 
                     # Send UDP message
-                    # //TODO: send udp message(s) to BlackJAI-Connect clients
+                    # TODO: send udp message(s) to BlackJAI-Connect clients
 
                     # Display image
                     cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)

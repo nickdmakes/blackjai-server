@@ -6,7 +6,7 @@ from blackjai_server.engine.models import Card, CardInfo
 DEBUG = True
 
 class BlackJAIEngine:
-    def __init__(self, frame_size: tuple[int, int], num_players=2, buffer_size=20, thresh_same_card=300, thresh_card_moving=150, thresh_card_cluster=500):
+    def __init__(self, frame_size: tuple[int, int], num_players=2, buffer_size=20, thresh_same_card=300, thresh_card_moving=150, thresh_card_cluster=450):
         self.frame_size = frame_size
         self.num_players = num_players
         self.state = BlackJAIState(num_players)
@@ -32,28 +32,94 @@ class BlackJAIEngine:
                 # segment cards into number of players + dealer piles
                 hands = self._cluster_cards(avg_card_locs)
                 for i in range(len(hands)):
+                    # hand: list[CardInfo]
                     hand = hands[i]
                     if (len(hand) == 2):
                         # Assign hand to player based on location of cluster
                         quadrant = self._get_card_loc_quadrant(hand[0])
                         if(quadrant == 4):
-                            self.state.add_hand_to_player(0, hand)
+                            self.state.add_hand_to_player(0, [hand[i].get_card() for i in range(len(hand))])
                         elif (quadrant == 3):
-                            self.state.add_hand_to_player(1, hand)
+                            self.state.add_hand_to_player(1, [hand[i].get_card() for i in range(len(hand))])
                     elif (len(hand) == 1):
-                        self.state.set_dealer_card(hand[0].get_card())
+                        self.state.add_hand_to_dealer([hand[0].get_card()])
                     else:
                         print("ERROR: hand has more than 2 cards. In BlackJAIEngine.update()")
                 self.state.set_phase(TURN_PHASE)
                 print("Deal phase complete. Turn phase started.") if DEBUG else None
         elif (self.state.get_phase() == TURN_PHASE):
-            # TODO 
-
             if (self.frame_card_info_queues.is_empty()):
                 self.state.set_phase(SHUFFLE_PHASE)
                 print("Turn phase complete. Shuffle phase started.") if DEBUG else None
+            else:
+                # continuously get average card locations to determine if cards are moving and 
+                # whether they should be added to a player's hand
+                avg_card_locs = self.frame_card_info_queues.get_avg_locs(self.thresh_card_moving)
+                if (len(avg_card_locs) >= (self.num_players * 2 + 1)):
+                    # segment cards into number of players + dealer piles
+                    # if a quadrant has 2 piles of cards, then the player has 2 hands and has split
+                    hands = self._cluster_cards(avg_card_locs)
+                    for i in range(len(hands)):
+                        # hand: list[CardInfo]
+                        hand = hands[i]
+                        quadrant = self._get_card_loc_quadrant(hand[0])
+                        if (quadrant == 4):
+                            self._check_player_cards_and_add(0, hand)
+                        elif (quadrant == 3):
+                            self._check_player_cards_and_add(1, hand)
+                        elif (quadrant == 1 or quadrant == 2):
+                            self._check_dealer_cards_and_add(hand)
         else:
             print("ERROR: Invalid phase. In BlackJAIEngine.update()")
+        print("\n1: ", self.state.get_player(0).get_hands()) if DEBUG else None
+        print("2: ", self.state.get_player(1).get_hands()) if DEBUG else None
+        print("D: ", self.state.get_dealer().get_hands(), "\n") if DEBUG else None
+
+    # If len(hand) == 1, and player hand contains card, player has split. 
+    # Keep same card in hand and remove other card from player hand. 
+    # If len(hand) == 1, and player hand does not contain the card, add card to new hand in player.
+    # Else if len(hand) >= 2, and player hand contains 2 or more cards, add any new cards from hand.
+    def _check_player_cards_and_add(self, player_idx, hand):
+        # loop through all cards in player hands
+        hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[0].get_card())
+        if (len(hand) == 1 and (hi_ci is not None)):
+            # player has split, remove other card from player hand
+            self.state.get_player(player_idx).remove_card_from_hand(hi_ci)
+            self.state.get_player(player_idx).add_hand([hand[0].get_card()])
+        elif (len(hand) == 1 and (hi_ci is None)):
+            # player has not split, add card to new hand in player
+            self.state.get_player(player_idx).add_hand([hand[0].get_card()])
+            print("ERROR: player has not split, add card to new hand in player. Dealt too far from hand. In BlackJAIEngine._check_player_cards_and_add()") if DEBUG else None
+        elif (len(hand) >= 2 and (hi_ci is not None)):
+            for i in range(1, len(hand)):
+                hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[i].get_card())
+                if (hi_ci is None):
+                    # cards are in NOT in player hand, add to hand
+                    self.state.get_player(player_idx).add_card_to_hand(hi_ci(0), hand[i].get_card())
+        elif (len(hand) >= 2 and (hi_ci is None)):
+            cards_to_add = [hand[0].get_card()]
+            add_cards = False
+            hand_idx = -1
+            for i in range(1, len(hand)):
+                hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[i].get_card())
+                cards_to_add.append(hand[i].get_card())
+                if (hi_ci is not None):
+                    add_cards = True
+                    hand_idx = hi_ci(0)
+            if (add_cards):
+                for card in cards_to_add:
+                    self.state.get_player(player_idx).add_card_to_hand(hand_idx, card)
+
+    # Same as player function but for dealer
+    def _check_dealer_cards_and_add(self, hand):
+        # loop through all cards in dealer hands
+        cards_to_add = []
+        for i in range(0, len(hand)):
+            hi_ci = self.state.get_dealer().is_card_in_hand(hand[i].get_card())
+            if (hi_ci is None):
+                cards_to_add.append(hand[i].get_card())
+        for card in cards_to_add:
+            self.state.add_card_to_dealer(card)
 
     # Given a CardInfo object, returns the quadrant of the card based on its location.
     # Quadrants are numbered 1-4 starting from the top left and going clockwise.
@@ -93,8 +159,8 @@ class BlackJAIEngine:
             # if not close enough or did not enter for loop, add card to new hand
             if (not appended):
                 hands.append([CardInfo(card_location, Card(key), 1)])
-        if (len(hands) != self.num_players + 1):
-            print("ERROR: number of hands does not match number of players + 1 (dealer). In BlackJAIEngine._cluster_cards()")
+        # if (len(hands) != self.num_players + 1):
+        #     print("ERROR: number of hands does not match number of players + 1 (dealer). In BlackJAIEngine._cluster_cards()")
         return hands
 
     # returns the location difference between 2 locations
@@ -332,8 +398,8 @@ class CardInfoQueues:
 
 
 if __name__ == "__main__":
-    engine = BlackJAIEngine()
-    
+    engine = BlackJAIEngine(frame_size=(1280, 720))
+
     # Json data card layout:
     # Player: 7S and 8S close together on top left section
     # Player: AH and 3D close together on top right section
@@ -342,23 +408,23 @@ if __name__ == "__main__":
         "predictions": [
             {
                 "x": 282,
-                "y": 301.5,
+                "y": 650.5,
                 "width": 44,
                 "height": 41,
                 "confidence": 0.944,
                 "class": "7S"
             },
             {
-                "x": 526.5,
-                "y": 228,
+                "x": 400.5,
+                "y": 640,
                 "width": 47,
                 "height": 28,
                 "confidence": 0.93,
                 "class": "8S"
             },
             {
-                "x": 485,
-                "y": 304,
+                "x": 350,
+                "y": 680,
                 "width": 44,
                 "height": 40,
                 "confidence": 0.926,
@@ -366,7 +432,7 @@ if __name__ == "__main__":
             },
             {
                 "x": 1100,
-                "y": 290.5,
+                "y": 660.5,
                 "width": 44,
                 "height": 29,
                 "confidence": 0.924,
@@ -374,7 +440,7 @@ if __name__ == "__main__":
             },
             {
                 "x": 1200,
-                "y": 320,
+                "y": 700,
                 "width": 44,
                 "height": 29,
                 "confidence": 0.924,
@@ -382,7 +448,7 @@ if __name__ == "__main__":
             },
             {
                 "x": 600,
-                "y": 600,
+                "y": 200,
                 "width": 44,
                 "height": 29,
                 "confidence": 0.924,

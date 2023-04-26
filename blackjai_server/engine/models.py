@@ -36,7 +36,10 @@ class Card:
         self.suit = suit
 
     def __str__(self):
-        return str(self.value) + " of " + str(self.suit)
+        return self.get_value_suit()
+
+    def __repr__(self) -> str:
+        return self.get_value_suit()
 
 
 # A class for the queue object. Contains a tuple of: (card location, card, confidence level)
@@ -102,6 +105,16 @@ class Player:
     def get_minimum_bet(self):
         return self.minimum_bet
 
+    # Returns tuple of (hand index, card index) if card is in hand, else returns None
+    def is_card_in_hand(self, card: Card):
+        for i in range(len(self.hands)):
+            hand = self.hands[i]
+            for j in range(len(hand)):
+                c = hand[j]
+                if (c.get_value_suit() == card.get_value_suit()):
+                    return (i, j)
+        return None
+
     def add_hand(self, hand: list[Card]):
         if (len(self.hands) == 0):
             self.hands = [hand]
@@ -128,10 +141,20 @@ class Player:
             raise Exception("Hand index out of range")
         self.hands.pop(hand_index)
 
+    def remove_card_from_hand(self, hand_index: int, card_index: int):
+        if (hand_index >= len(self.hands)):
+            raise Exception("Hand index out of range")
+        if (card_index >= len(self.hands[hand_index])):
+            raise Exception("Card index out of range")
+        self.hands[hand_index].pop(card_index)
+
     def reset_hands(self):
         self.hands = []
 
     def __str__(self):
+        return "Cards: " + str(self.hands) + "\nMinimum Bet: " + str(self.minimum_bet)
+    
+    def __repr__(self) -> str:
         return "Cards: " + str(self.hands) + "\nMinimum Bet: " + str(self.minimum_bet)
 
 

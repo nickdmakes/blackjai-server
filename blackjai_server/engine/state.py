@@ -15,7 +15,7 @@ class BlackJAIState:
         self.players = []
         for i in range(num_players):
             self.players.append(Player(minimum_bet=5))
-        self.dealer_card = None
+        self.dealer = Player(minimum_bet=0)
         self.count_systems = CountingSystems(num_decks=1)
 
     def get_phase(self) -> str:
@@ -30,17 +30,14 @@ class BlackJAIState:
     def get_player(self, index) -> Player:
         return self.players[index]
 
-    def get_dealer_card(self) -> Card:
-        return self.dealer_card
+    def get_dealer(self) -> Player:
+        return self.dealer
 
     def get_count_systems(self) -> CountingSystems:
         return self.count_systems
 
     def set_phase(self, phase):
         self.phase = phase
-
-    def set_dealer_card(self, card: Card):
-        self.dealer_card = card
 
     def set_player(self, player_index: int, player: Player):
         self.players[player_index] = player
@@ -52,6 +49,14 @@ class BlackJAIState:
     # Adds a card to a player's hand
     def add_card_to_player_hand(self, player_index: int, hand_index: int, card: Card):
         self.players[player_index].add_card_to_hand(hand_index, card)
+
+    # Adds a hand (list of cards) to the dealer
+    def add_hand_to_dealer(self, cards: list[Card]):
+        self.dealer.add_hand(cards)
+
+    # Adds a card to the dealer's hand
+    def add_card_to_dealer(self, card: Card):
+        self.dealer.add_card_to_hand(0, card)
 
     def reset_player_hands(self):
         for player in self.players:
