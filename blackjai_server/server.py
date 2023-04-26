@@ -28,7 +28,7 @@ class BlackJAIServer:
 
     def start(self):
         receiver = VideoStreamSubscriber(self.hostname, self.port)
-        engine = BlackJAIEngine(frame_size=(1280, 720), buffer_size=10)
+        engine = BlackJAIEngine(frame_size=(1280, 720), buffer_size=16)
 
         try:
             if self.view_mode == "view":

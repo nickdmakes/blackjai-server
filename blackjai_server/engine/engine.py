@@ -84,28 +84,31 @@ class BlackJAIEngine:
         hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[0].get_card())
         if (len(hand) == 1 and (hi_ci is not None)):
             # player has split, remove other card from player hand
-            self.state.get_player(player_idx).remove_card_from_hand(hi_ci)
+            self.state.get_player(player_idx).remove_card_from_hand(hi_ci[0], hi_ci[1])
             self.state.get_player(player_idx).add_hand([hand[0].get_card()])
         elif (len(hand) == 1 and (hi_ci is None)):
             # player has not split, add card to new hand in player
             self.state.get_player(player_idx).add_hand([hand[0].get_card()])
             print("ERROR: player has not split, add card to new hand in player. Dealt too far from hand. In BlackJAIEngine._check_player_cards_and_add()") if DEBUG else None
         elif (len(hand) >= 2 and (hi_ci is not None)):
+            # 1st card exists in player hand, add any new cards from hand
+            hand_idx = hi_ci[0]
             for i in range(1, len(hand)):
                 hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[i].get_card())
-                if (hi_ci is None):
+                if ((hi_ci is None) and (len(self.state.get_player(player_idx).get_hand(hand_idx)) < len(hand))):
                     # cards are in NOT in player hand, add to hand
-                    self.state.get_player(player_idx).add_card_to_hand(hi_ci(0), hand[i].get_card())
+                    self.state.get_player(player_idx).add_card_to_hand(hand_idx, hand[i].get_card())
         elif (len(hand) >= 2 and (hi_ci is None)):
             cards_to_add = [hand[0].get_card()]
             add_cards = False
             hand_idx = -1
             for i in range(1, len(hand)):
                 hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[i].get_card())
-                cards_to_add.append(hand[i].get_card())
                 if (hi_ci is not None):
                     add_cards = True
-                    hand_idx = hi_ci(0)
+                    hand_idx = hi_ci[0]
+                else:
+                    cards_to_add.append(hand[i].get_card())
             if (add_cards):
                 for card in cards_to_add:
                     self.state.get_player(player_idx).add_card_to_hand(hand_idx, card)
