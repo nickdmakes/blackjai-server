@@ -4,7 +4,7 @@ import cv2 as cv
 # Function to detect card type and save the prediction to a buffer image
 def detect_card_type(image, model):
     # infer based on frame from webcam and save the prediction
-    json_data = model.predict(image, confidence=80, overlap=30).json()
+    json_data = model.predict(image, confidence=85, overlap=30).json()
 
     # check if json contains any predictions and show the prediction if it does
     if json_data["predictions"]:

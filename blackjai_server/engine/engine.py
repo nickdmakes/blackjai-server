@@ -6,7 +6,7 @@ from blackjai_server.engine.models import Card, CardInfo
 DEBUG = True
 
 class BlackJAIEngine:
-    def __init__(self, frame_size: tuple[int, int], num_players=2, buffer_size=20, thresh_same_card=300, thresh_card_moving=150, thresh_card_cluster=450):
+    def __init__(self, frame_size: tuple[int, int], num_players=2, buffer_size=20, thresh_same_card=500, thresh_card_moving=200, thresh_card_cluster=600):
         self.frame_size = frame_size
         self.num_players = num_players
         self.state = BlackJAIState(num_players)

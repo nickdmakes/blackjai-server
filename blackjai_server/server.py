@@ -9,6 +9,7 @@ from time import sleep
 import datetime
 from blackjai_server.detection.detect import detect_card_type
 from blackjai_server.engine.engine import BlackJAIEngine
+from blackjai_server.preprocessing.preprocess import greyscale, apply_contrast, apply_threshold, convert_to_rgb, apply_dilate
 
 
 """
@@ -28,7 +29,7 @@ class BlackJAIServer:
 
     def start(self):
         receiver = VideoStreamSubscriber(self.hostname, self.port)
-        engine = BlackJAIEngine(frame_size=(1280, 720), buffer_size=16)
+        engine = BlackJAIEngine(frame_size=(1920, 1080), buffer_size=16)
 
         try:
             if self.view_mode == "view":
@@ -45,6 +46,13 @@ class BlackJAIServer:
                     # Receive image from publisher and convert to numpy array
                     msg, frame = receiver.receive(timeout=4)
                     image = np.array(cv.imdecode(np.frombuffer(frame, dtype='uint8'), -1))
+
+                    # Preprocess image
+                    # contrast = apply_contrast(image)
+                    # grey = greyscale(image)
+                    # threshold = apply_threshold(grey)
+                    # dilated = apply_dilate(threshold)
+                    # rgb = convert_to_rgb(dilated)
 
                     # Detect image
                     image, json_data = detect_card_type(image, self.rf_model)
