@@ -28,7 +28,7 @@ class BlackJAIEngine:
         elif (self.state.get_phase() == DEAL_PHASE):
             # determine when 5 distinct cards are not moving anymore (buffer 80% full)
             avg_card_locs = self.frame_card_info_queues.get_avg_locs(self.thresh_card_moving)
-            if (len(avg_card_locs) >= (self.num_players * 2 + 1)):
+            if (len(avg_card_locs) == (self.num_players * 2 + 1)):
                 # segment cards into number of players + dealer piles
                 hands = self._cluster_cards(avg_card_locs)
                 for i in range(len(hands)):
