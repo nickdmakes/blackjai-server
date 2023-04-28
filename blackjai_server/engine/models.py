@@ -1,3 +1,5 @@
+import math
+
 """
 Contains all the model used in the game of blackjack and for the BlackJAI system
 """
@@ -70,13 +72,13 @@ class CardInfo():
 
     # returns the location difference between this card and another card
     def get_loc_diff(self, card_info):
-        return abs(self.location[0] - card_info.location[0]) + abs(self.location[1] - card_info.location[1])
+        return int(math.sqrt((self.location[0] - card_info.get_location()[0])**2 + (self.location[1] - card_info.get_location()[1])**2))
     
     # returns the average location and confidence between this card and another card (must be the same card)
     def avg_card_infos(self, card_info):
         if (self.card.get_value_suit() != card_info.card.get_value_suit()):
             raise Exception("CardInfo objects must be the same card")
-        return CardInfo(((self.location[0] + card_info.location[0]) / 2, (self.location[1] + card_info.location[1]) / 2), self.card, (self.confidence + card_info.confidence) / 2)
+        return CardInfo((int((self.location[0] + card_info.location[0]) / 2), int((self.location[1] + card_info.location[1]) / 2)), self.card, (self.confidence + card_info.confidence) / 2)
 
     def __str__(self):
         return "(" + str(self.location) + " " + str(self.card) + " " + str(self.confidence) + ")"
@@ -106,7 +108,7 @@ class Player:
         return self.minimum_bet
 
     # Returns tuple of (hand index, card index) if card is in hand, else returns None
-    def is_card_in_hand(self, card: Card):
+    def is_card_in_hands(self, card: Card):
         for i in range(len(self.hands)):
             hand = self.hands[i]
             for j in range(len(hand)):
@@ -114,6 +116,20 @@ class Player:
                 if (c.get_value_suit() == card.get_value_suit()):
                     return (i, j)
         return None
+
+    # Check if the player has a hand that contains the same cards as the other hand
+    def conatins_hand(self, other_hand: list[CardInfo]):
+        hand_match = False
+        for hand in self.hands:
+            for card in hand:
+                if ((len(hand) != len(other_hand)) or not all(card.get_value_suit() == other_card.get_card().get_value_suit() for other_card in other_hand)):
+                    hand_match = False
+                    break
+                else:
+                    hand_match = True
+            if (hand_match):
+                break
+        return hand_match
 
     def add_hand(self, hand: list[Card]):
         if (len(self.hands) == 0):

@@ -1,4 +1,5 @@
 import sys
+import math
 
 from blackjai_server.engine.state import BlackJAIState, SHUFFLE_PHASE, DEAL_PHASE, TURN_PHASE
 from blackjai_server.engine.models import Card, CardInfo
@@ -6,7 +7,7 @@ from blackjai_server.engine.models import Card, CardInfo
 DEBUG = True
 
 class BlackJAIEngine:
-    def __init__(self, frame_size: tuple[int, int], num_players=2, buffer_size=20, thresh_same_card=500, thresh_card_moving=200, thresh_card_cluster=600):
+    def __init__(self, frame_size: tuple[int, int], num_players=2, buffer_size=20, thresh_same_card=300, thresh_card_moving=200, thresh_card_cluster=400):
         self.frame_size = frame_size
         self.num_players = num_players
         self.state = BlackJAIState(num_players)
@@ -49,8 +50,10 @@ class BlackJAIEngine:
                 print("Deal phase complete. Turn phase started.") if DEBUG else None
         elif (self.state.get_phase() == TURN_PHASE):
             if (self.frame_card_info_queues.is_empty()):
-                self.state.set_phase(SHUFFLE_PHASE)
-                print("Turn phase complete. Shuffle phase started.") if DEBUG else None
+                # reset state to deal phase
+                self.state.reset_state()
+                self.state.set_phase(DEAL_PHASE)
+                print("Turn phase complete. Deal phase started.") if DEBUG else None
             else:
                 # continuously get average card locations to determine if cards are moving and 
                 # whether they should be added to a player's hand
@@ -81,11 +84,13 @@ class BlackJAIEngine:
     # Else if len(hand) >= 2, and player hand contains 2 or more cards, add any new cards from hand.
     def _check_player_cards_and_add(self, player_idx, hand):
         # loop through all cards in player hands
-        hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[0].get_card())
+        hi_ci = self.state.get_player(player_idx).is_card_in_hands(hand[0].get_card())
         if (len(hand) == 1 and (hi_ci is not None)):
             # player has split, remove other card from player hand
-            self.state.get_player(player_idx).remove_card_from_hand(hi_ci[0], hi_ci[1])
-            self.state.get_player(player_idx).add_hand([hand[0].get_card()])
+            # if the player hand and given hand is equal, do nothing
+            if (not self.state.get_player(player_idx).conatins_hand(hand)):
+                self.state.get_player(player_idx).remove_card_from_hand(hi_ci[0], hi_ci[1])
+                self.state.get_player(player_idx).add_hand([hand[0].get_card()])
         elif (len(hand) == 1 and (hi_ci is None)):
             # player has not split, add card to new hand in player
             self.state.get_player(player_idx).add_hand([hand[0].get_card()])
@@ -94,7 +99,7 @@ class BlackJAIEngine:
             # 1st card exists in player hand, add any new cards from hand
             hand_idx = hi_ci[0]
             for i in range(1, len(hand)):
-                hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[i].get_card())
+                hi_ci = self.state.get_player(player_idx).is_card_in_hands(hand[i].get_card())
                 if ((hi_ci is None) and (len(self.state.get_player(player_idx).get_hand(hand_idx)) < len(hand))):
                     # cards are in NOT in player hand, add to hand
                     self.state.get_player(player_idx).add_card_to_hand(hand_idx, hand[i].get_card())
@@ -103,7 +108,7 @@ class BlackJAIEngine:
             add_cards = False
             hand_idx = -1
             for i in range(1, len(hand)):
-                hi_ci = self.state.get_player(player_idx).is_card_in_hand(hand[i].get_card())
+                hi_ci = self.state.get_player(player_idx).is_card_in_hands(hand[i].get_card())
                 if (hi_ci is not None):
                     add_cards = True
                     hand_idx = hi_ci[0]
@@ -118,7 +123,7 @@ class BlackJAIEngine:
         # loop through all cards in dealer hands
         cards_to_add = []
         for i in range(0, len(hand)):
-            hi_ci = self.state.get_dealer().is_card_in_hand(hand[i].get_card())
+            hi_ci = self.state.get_dealer().is_card_in_hands(hand[i].get_card())
             if (hi_ci is None):
                 cards_to_add.append(hand[i].get_card())
         for card in cards_to_add:
@@ -146,33 +151,47 @@ class BlackJAIEngine:
     def _cluster_cards(self, card_loc_dict: dict[str, tuple[int, int]]) -> list[list[CardInfo]]:
         hands = []
         for key in card_loc_dict.keys():
-            appended = False
+            card_info_to_add = None
+            added = False
             card_location = card_loc_dict[key]
             # check if card is close enough to any of the hands
-            for i in range(len(hands)):
-                hand = hands[i]
+            for hand in hands:
+                # average all card's locations in hand, then add card to hand
+                sum_loc_x = 0
+                sum_loc_y = 0
+                num_cards = 0
                 # check if card is close enough to any of the cards in the hand
-                for j in range(len(hand)):
-                    card_info = hand[j]
-                    if (self._get_loc_diff(card_info.get_location(), card_location) < self.thresh_card_cluster):
-                        # add card to hand
-                        hand.append(CardInfo(card_location, Card(key), 1))
-                        appended = True
-                        break
-            # if not close enough or did not enter for loop, add card to new hand
-            if (not appended):
+                for card_info in hand:
+                    sum_loc_x += card_info.get_location()[0]
+                    sum_loc_y += card_info.get_location()[1]
+                    num_cards += 1
+                    same_card = card_info.get_card().get_value_suit() == key
+                    if ((self._get_loc_diff(card_info.get_location(), card_location) < self.thresh_card_cluster) and (not same_card) and (card_info_to_add is None)):
+                        sum_loc_x += card_location[0]
+                        sum_loc_y += card_location[1]
+                        num_cards += 1
+                        card_info_to_add = CardInfo(card_location, Card(key), 1)
+                # set all card locations in hand to the average location
+                if (num_cards > len(hand)):
+                    avg_loc = (int(sum_loc_x / num_cards), int(sum_loc_y / num_cards))
+                    for card_info in hand:
+                        card_info.set_location(avg_loc)
+                    if (card_info_to_add is not None):
+                        card_info_to_add.set_location(avg_loc)
+                        hand.append(card_info_to_add)
+                        added = True
+            # if card not close enough or did not enter for loop, add card to new hand
+            if (not added):
                 hands.append([CardInfo(card_location, Card(key), 1)])
-        # if (len(hands) != self.num_players + 1):
-        #     print("ERROR: number of hands does not match number of players + 1 (dealer). In BlackJAIEngine._cluster_cards()")
         return hands
 
     # returns the location difference between 2 locations
     def _get_loc_diff(self, loc1: tuple[int, int], loc2: tuple[int, int]):
-        return abs(loc1[0] - loc2[0]) + abs(loc1[1] - loc2[1])
+        return int(math.sqrt((loc1[0] - loc2[0])**2 + (loc1[1] - loc2[1])**2))
 
     def _update_card_info_queues(self, json_data):
         card_dict = {}
-        if json_data["predictions"]:
+        if "predictions" in json_data:
             for prediction in json_data["predictions"]:
                 # get the bounding box of the prediction
                 x1 = int(prediction["x"])
@@ -188,39 +207,30 @@ class BlackJAIEngine:
                 if (card_type not in card_dict):
                     card_dict[card_type] = [cur_card_info]
                 else:
-                    card_dict[card_type].append(cur_card_info)
-        # find same cards labeled multiple times in card_dict
-        # average their coordinates and confidence to get 1 card label per card type (key) in card_dict
-        # for card_info_list in card_dict.values():
-        #     if (len(card_info_list) > 1):
-        #         # find card labels that are close enough
-        #         for i in range(len(card_info_list)):
-        #             if ((i + 1) >= len(card_info_list)):
-        #                 break
-        #             for j in range(i + 1, len(card_info_list)):
-        #                 if (card_info_list[i].get_loc_diff(card_info_list[j]) < self.thresh_same_card):
-        #                     # average coordinates and confidence
-        #                     card_info_list[i] = card_info_list[i].avg_card_infos(card_info_list[j])
-        #                     # remove the card that was averaged
-        #                     card_info_list.pop(j)
-        #                     j -= 1
-        # self.frame_card_info_queues.add(card_dict)
+                    # find same cards labeled multiple times in card_dict
+                    # average their coordinates and confidence to get 1 card label per card type (key) in card_dict
+                    if (len(card_dict[card_type]) >= 1):
+                        for i in range(len(card_dict[card_type])):
+                            card_info = card_dict[card_type][i]
+                            diff = card_info.get_loc_diff(cur_card_info)
+                            if (diff < self.thresh_same_card):
+                                card_dict[card_type][i] = card_info.avg_card_infos(cur_card_info)
+                    else:
+                        card_dict[card_type].append(cur_card_info)
 
-        # for each key in card_dict, 
-        for key in card_dict.keys():
-            card_dict[key] = [card_dict[key][0]]
+        # add card_dict to frame_card_info_queues
         self.frame_card_info_queues.add(card_dict)
 
 
 # A dictionary class with keys as playing cards and values as a queue of CardInfo objects
 class CardInfoQueues:
     # threshold for number of card infos in the queue for a card type
-    THRESH_NUM_CARD_INFOS = 3
+    THRESH_NUM_CARD_INFOS = 2
 
     def __init__(self, buffer_size=20):
         self.buffer_size = buffer_size
         # buffer must be 80% full to get final average location and put in players hand after 
-        self.thresh_num_card_infos_full = buffer_size - int((0.2 * buffer_size))
+        self.thresh_num_card_infos_full = buffer_size - int((0.6 * buffer_size))
         self.dict = {
             # 2
             "2C": [],
@@ -354,7 +364,7 @@ class CardInfoQueues:
                 if (num_cards >= 1):
                     avg_loc_x = sum_loc_x / num_cards
                     avg_loc_y = sum_loc_y / num_cards
-                    diff = abs(loc[0] - avg_loc_x) + abs(loc[1] - avg_loc_y)
+                    diff = int(math.sqrt((loc[0] - avg_loc_x)**2 + (loc[1] - avg_loc_y)**2))
                     if (diff > thresh_card_moving):
                         # card is moving, return None
                         return None

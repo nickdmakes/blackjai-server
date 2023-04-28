@@ -62,4 +62,7 @@ class BlackJAIState:
         for player in self.players:
             player.reset_hands()
 
-
+    def reset_state(self):
+        self.phase = "shuffle"
+        self.reset_player_hands()
+        self.dealer.reset_hands()

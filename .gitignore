@@ -186,3 +186,6 @@ fabric.properties
 
 # Ignore blackjai_server/data
 blackjai_server/data
+
+# Ignore ml_models
+blackjai_server/ml_models
