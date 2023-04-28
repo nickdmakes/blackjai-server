@@ -72,3 +72,12 @@ class BlackJAIState:
         self.phase = "shuffle"
         self.reset_player_hands()
         self.dealer.reset_hands()
+
+    # Serializes the state into a dictionary
+    def serialize(self) -> dict:
+        return {
+            "phase": self.phase,
+            "players": [player.serialize() for player in self.players],
+            "dealer": self.dealer.serialize(),
+            "count_systems": self.count_systems.serialize(),
+        }

@@ -2,7 +2,7 @@ import sys
 import math
 
 from blackjai_server.engine.state import BlackJAIState, SHUFFLE_PHASE, DEAL_PHASE, TURN_PHASE
-from blackjai_server.engine.models import Card, CardInfo
+from blackjai_server.engine.models import Card, CardInfo, BasicStrategy
 
 DEBUG = True
 
@@ -18,8 +18,11 @@ class BlackJAIEngine:
         self.thresh_card_moving = thresh_card_moving
         self.thresh_card_cluster = thresh_card_cluster
         self.frame_card_info_queues = CardInfoQueues(buffer_size)
+        self.strategy = BasicStrategy()
+        self.engine_payload = {}
 
     def update(self, json_data):
+        self.engine_payload = self.state.serialize()
         self._update_card_info_queues(json_data)
         # handle state changes
         if (self.state.get_phase() == SHUFFLE_PHASE):
@@ -52,9 +55,9 @@ class BlackJAIEngine:
                     else:
                         print("ERROR: hand has more than 2 cards. In BlackJAIEngine.update()")
                 self.state.set_phase(TURN_PHASE)
+                self.engine_payload = self.state.serialize()
                 print("Deal phase complete. Turn phase started.") if DEBUG else None
         elif (self.state.get_phase() == TURN_PHASE):
-            print(self.state.get_count_systems()) if DEBUG else None
             if (self.frame_card_info_queues.is_empty()):
                 # reset state to deal phase
                 self.state.reset_state()
@@ -78,11 +81,31 @@ class BlackJAIEngine:
                             self._check_player_cards_and_add(1, hand)
                         elif (quadrant == 1 or quadrant == 2):
                             self._check_dealer_cards_and_add(hand)
+            self.engine_payload = self.state.serialize()
+            if len(self.state.dealer.get_hands()[0]) == 1:
+                self.apply_strategy()
         else:
             print("ERROR: Invalid phase. In BlackJAIEngine.update()")
-        print("\n1: ", self.state.get_player(0).get_hands()) if DEBUG else None
-        print("2: ", self.state.get_player(1).get_hands()) if DEBUG else None
-        print("D: ", self.state.get_dealer().get_hands(), "\n") if DEBUG else None
+        
+        # Print out player hands
+        # print("\n1: ", self.state.get_player(0).get_hands()) if DEBUG else None
+        # print("2: ", self.state.get_player(1).get_hands()) if DEBUG else None
+        # print("D: ", self.state.get_dealer().get_hands(), "\n") if DEBUG else None
+
+
+        # TODO: make json out of state and respective counts/strategies and return it
+        print(self.engine_payload, "\n") if DEBUG else None
+        return self.engine_payload
+    
+
+    # Apply strategy to state
+    def apply_strategy(self):
+        players = self.state.get_players()
+        dealer_card = self.state.get_dealer().get_hand(0)[0]
+        self.engine_payload["actions"] = []
+        for player in players:
+            action_list = self.strategy.get_action(player, dealer_card)
+            self.engine_payload["actions"].append(action_list)
 
     # If len(hand) == 1, and player hand contains card, player has split. 
     # Keep same card in hand and remove other card from player hand. 

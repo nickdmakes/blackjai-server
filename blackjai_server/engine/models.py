@@ -46,7 +46,7 @@ class Card:
 
 # A class for the queue object. Contains a tuple of: (card location, card, confidence level)
 # Frames will output multiple of these objects
-class CardInfo():
+class CardInfo:
     def __init__(self, location: tuple[int, int], card: Card, confidence):
         self.location = location
         self.card = card
@@ -172,6 +172,13 @@ class Player:
     
     def __repr__(self) -> str:
         return "Cards: " + str(self.hands) + "\nMinimum Bet: " + str(self.minimum_bet)
+    
+    # Serialize the player object to a dictionary
+    def serialize(self):
+        return {"hands": [self.serialize_hand(hand) for hand in self.hands], "minimum_bet": self.minimum_bet}
+    
+    def serialize_hand(self, hand: list[Card]):
+        return [card.get_value_suit() for card in hand]
 
 
 # The model for the optimal strategy for the game of blackjack (basic strategy)
@@ -188,9 +195,11 @@ class BasicStrategy:
     RS = "RS"
 
     # Map each action key to its corresponding action description
-    ACTIONS = {H_: "Hit", S_: "Stand", DH: "Double down if permitted, else Hit", DS: "Double down if permitted, else Stand",
+    ACTIONS_TEXT = {H_: "Hit", S_: "Stand", DH: "Double down if permitted, else Hit", DS: "Double down if permitted, else Stand",
                RH: "Surrender if permitted, else Hit", P_: "Split", PH: "Split if double down permitted, else Hit",
                PD: "Split if double down permitted, else Double down", RS: "Surrender if permitted, else Stand"}
+    
+    ACTIONS = {H_: H_, S_: S_, DH: DH, DS: DS, RH: RH, P_: P_, PH: PH, PD: PD, RS: RS}
 
     # Define the dealer's up card index offset
     DEALER_OFFSET = 2
@@ -418,6 +427,16 @@ class CountingSystems:
     def __str__(self) -> str:
         return "Hi-Lo: " + str(self.count_hi_lo) + "\nOmega II: " + str(self.count_omega_ii) + \
                "\nWong Halves: " + str(self.count_wong_halves) + "\nZen Count: " + str(self.count_zen_count)
+    
+    # serialize the running counts
+    def serialize(self) -> dict:
+        return {
+            "count_hi_lo": self.count_hi_lo,
+            "count_omega_ii": self.count_omega_ii,
+            "count_wong_halves": self.count_wong_halves,
+            "count_zen_count": self.count_zen_count,
+            "deck_dict": self.deck_dict
+        }
 
 
 def test1(bs: BasicStrategy):
