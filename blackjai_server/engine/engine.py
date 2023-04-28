@@ -39,16 +39,22 @@ class BlackJAIEngine:
                         # Assign hand to player based on location of cluster
                         quadrant = self._get_card_loc_quadrant(hand[0])
                         if(quadrant == 4):
-                            self.state.add_hand_to_player(0, [hand[i].get_card() for i in range(len(hand))])
+                            hand_to_add = [hand[i].get_card() for i in range(len(hand))]
+                            self.state.add_hand_to_player(0, hand_to_add)
+                            self.state.update_count_hand(hand_to_add)
                         elif (quadrant == 3):
-                            self.state.add_hand_to_player(1, [hand[i].get_card() for i in range(len(hand))])
+                            hand_to_add = [hand[i].get_card() for i in range(len(hand))]
+                            self.state.add_hand_to_player(1, hand_to_add)
+                            self.state.update_count_hand(hand_to_add)
                     elif (len(hand) == 1):
                         self.state.add_hand_to_dealer([hand[0].get_card()])
+                        self.state.update_count_card(hand[0].get_card())
                     else:
                         print("ERROR: hand has more than 2 cards. In BlackJAIEngine.update()")
                 self.state.set_phase(TURN_PHASE)
                 print("Deal phase complete. Turn phase started.") if DEBUG else None
         elif (self.state.get_phase() == TURN_PHASE):
+            print(self.state.get_count_systems()) if DEBUG else None
             if (self.frame_card_info_queues.is_empty()):
                 # reset state to deal phase
                 self.state.reset_state()
@@ -91,9 +97,11 @@ class BlackJAIEngine:
             if (not self.state.get_player(player_idx).conatins_hand(hand)):
                 self.state.get_player(player_idx).remove_card_from_hand(hi_ci[0], hi_ci[1])
                 self.state.get_player(player_idx).add_hand([hand[0].get_card()])
+                self.state.update_count_card(hand[0].get_card())
         elif (len(hand) == 1 and (hi_ci is None)):
             # player has not split, add card to new hand in player
             self.state.get_player(player_idx).add_hand([hand[0].get_card()])
+            self.state.update_count_card(hand[0].get_card())
             print("ERROR: player has not split, add card to new hand in player. Dealt too far from hand. In BlackJAIEngine._check_player_cards_and_add()") if DEBUG else None
         elif (len(hand) >= 2 and (hi_ci is not None)):
             # 1st card exists in player hand, add any new cards from hand
@@ -103,6 +111,7 @@ class BlackJAIEngine:
                 if ((hi_ci is None) and (len(self.state.get_player(player_idx).get_hand(hand_idx)) < len(hand))):
                     # cards are in NOT in player hand, add to hand
                     self.state.get_player(player_idx).add_card_to_hand(hand_idx, hand[i].get_card())
+                    self.state.update_count_card(hand[i].get_card())
         elif (len(hand) >= 2 and (hi_ci is None)):
             cards_to_add = [hand[0].get_card()]
             add_cards = False
@@ -117,6 +126,7 @@ class BlackJAIEngine:
             if (add_cards):
                 for card in cards_to_add:
                     self.state.get_player(player_idx).add_card_to_hand(hand_idx, card)
+                    self.state.update_count_card(card)
 
     # Same as player function but for dealer
     def _check_dealer_cards_and_add(self, hand):
@@ -128,6 +138,7 @@ class BlackJAIEngine:
                 cards_to_add.append(hand[i].get_card())
         for card in cards_to_add:
             self.state.add_card_to_dealer(card)
+            self.state.update_count_card(card)
 
     # Given a CardInfo object, returns the quadrant of the card based on its location.
     # Quadrants are numbered 1-4 starting from the top left and going clockwise.

@@ -36,6 +36,12 @@ class BlackJAIState:
     def get_count_systems(self) -> CountingSystems:
         return self.count_systems
 
+    def update_count_hand(self, hand: list[Card]):
+        self.count_systems.update_running_counts_hand(hand)
+
+    def update_count_card(self, card: Card):
+        self.count_systems.update_running_counts_card(card)
+
     def set_phase(self, phase):
         self.phase = phase
 

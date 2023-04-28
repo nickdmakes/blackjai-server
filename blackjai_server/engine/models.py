@@ -315,6 +315,7 @@ class BasicStrategy:
 class CountingSystems:
     def __init__(self, num_decks=1):
         self.num_decks = num_decks
+        self.deck_dict = {}
         self.count_hi_lo = 0
         self.count_omega_ii = 0
         self.count_wong_halves = 0
@@ -351,51 +352,72 @@ class CountingSystems:
     def set_num_decks(self, num_decks: int):
         self.num_decks = num_decks
 
-    def update_running_counts(self, card: Card):
-        card_val = card.get_value()
-        # Hi-Lo
-        if (card_val <= 6):
-            self.count_hi_lo += 1
-        elif (card_val >= 10):
-            self.count_hi_lo -= 1
+    # update all running counts for the card(s) in the hand if they have not been seen before 
+    # or if there are less than the number of decks
+    def update_running_counts_hand(self, hand: list[Card]):
+        for card in hand:
+            self.update_running_counts_card(card)
 
-        # Omega II
-        if (card_val == 2 or card_val == 3 or card_val == 7):
-            self.count_omega_ii += 1
-        elif (card_val >= 4 and card_val <= 6):
-            self.count_omega_ii += 2
-        elif (card_val == 9):
-            self.count_omega_ii -= 1
-        elif (card_val == 10):
-            self.count_omega_ii -= 2
+    # update all running counts if the card has not been seen before or if there are less than the number of decks
+    def update_running_counts_card(self, card: Card):
+        # add card to deck dictionary if it doesn't exist
+        update_count = False
+        if (card.get_value_suit() not in self.deck_dict):
+            self.deck_dict[card.get_value_suit()] = 1
+            update_count = True
+        elif (self.deck_dict[card.get_value_suit()] < self.num_decks):
+            self.deck_dict[card.get_value_suit()] += 1
+            update_count = True
+        if (update_count):
+            card_val = card.get_value()
+            # Hi-Lo
+            if (card_val <= 6):
+                self.count_hi_lo += 1
+            elif (card_val >= 10):
+                self.count_hi_lo -= 1
 
-        # Wong Halves
-        if (card_val == 2 or card_val == 7):
-            self.count_wong_halves += 0.5
-        elif (card_val == 3 or card_val == 4 or card_val == 6):
-            self.count_wong_halves += 1
-        elif (card_val == 5):
-            self.count_wong_halves += 1.5
-        elif (card_val == 9):
-            self.count_wong_halves -= 0.5
-        elif (card_val == 10 or card_val == 11):
-            self.count_wong_halves -= 1
+            # Omega II
+            if (card_val == 2 or card_val == 3 or card_val == 7):
+                self.count_omega_ii += 1
+            elif (card_val >= 4 and card_val <= 6):
+                self.count_omega_ii += 2
+            elif (card_val == 9):
+                self.count_omega_ii -= 1
+            elif (card_val == 10):
+                self.count_omega_ii -= 2
 
-        # Zen Count
-        if (card_val == 2 or card_val == 3 or card_val == 7):
-            self.count_zen_count += 1
-        elif (card_val >= 4 and card_val <= 6):
-            self.count_zen_count += 2
-        elif (card_val == 10):
-            self.count_zen_count -= 2
-        elif (card_val == 11):
-            self.count_zen_count -= 1
+            # Wong Halves
+            if (card_val == 2 or card_val == 7):
+                self.count_wong_halves += 0.5
+            elif (card_val == 3 or card_val == 4 or card_val == 6):
+                self.count_wong_halves += 1
+            elif (card_val == 5):
+                self.count_wong_halves += 1.5
+            elif (card_val == 9):
+                self.count_wong_halves -= 0.5
+            elif (card_val == 10 or card_val == 11):
+                self.count_wong_halves -= 1
+
+            # Zen Count
+            if (card_val == 2 or card_val == 3 or card_val == 7):
+                self.count_zen_count += 1
+            elif (card_val >= 4 and card_val <= 6):
+                self.count_zen_count += 2
+            elif (card_val == 10):
+                self.count_zen_count -= 2
+            elif (card_val == 11):
+                self.count_zen_count -= 1
 
     def reset_running_counts(self):
         self.count_hi_lo = 0
         self.count_omega_ii = 0
         self.count_wong_halves = 0
         self.count_zen_count = 0
+        self.deck_dict = {}
+
+    def __str__(self) -> str:
+        return "Hi-Lo: " + str(self.count_hi_lo) + "\nOmega II: " + str(self.count_omega_ii) + \
+               "\nWong Halves: " + str(self.count_wong_halves) + "\nZen Count: " + str(self.count_zen_count)
 
 
 def test1(bs: BasicStrategy):
