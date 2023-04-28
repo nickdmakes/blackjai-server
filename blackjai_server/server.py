@@ -1,6 +1,7 @@
 import sys
 import os
 import traceback
+import socket
 import cv2 as cv
 import imagezmq
 import threading
@@ -8,6 +9,7 @@ import numpy as np
 from roboflow import Roboflow
 from time import sleep
 import datetime
+from conf import BLACKJAI_CONNECT_IP, BLACKJAI_CONNECT_PORT
 from PIL import Image
 from ultralytics import YOLO
 from blackjai_server.detection.detect import detect_card_type_roboflow, detect_card_type_yolo
@@ -24,6 +26,7 @@ class BlackJAIServer:
         self.hostname = hostname
         self.port = port
         self.view_mode = view_mode
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         # Load in YOLO model
         self.yolo_model = YOLO(f"{os.getcwd()}/blackjai_server/ml_models/best_m_31eps_all.pt")
@@ -70,10 +73,12 @@ class BlackJAIServer:
                     image, json_data = detect_card_type_yolo(image, self.yolo_model)
 
                     # Update engine
-                    engine.update(json_data)
+                    payload = engine.update(json_data)
 
-                    # Send UDP message
-                    # TODO: send udp message(s) to BlackJAI-Connect clients
+                    # Send payload to ip 192.168.1.9 port 5005 using UDP
+                    # encode payload
+                    payload = str(payload).encode('utf-8')
+                    self.socket.sendto(payload, ("192.168.50.9", BLACKJAI_CONNECT_PORT))
 
                     # Display image
                     cv.imshow(f"BlackJAI Server Feed - Mode: {self.view_mode}", image)
