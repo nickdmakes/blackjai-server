@@ -6,6 +6,7 @@ from blackjai_server.engine.models import Card, CardInfo, BasicStrategy
 
 DEBUG = True
 
+
 class BlackJAIEngine:
     def __init__(self, frame_size: tuple[int, int], num_players=2, buffer_size=20, thresh_same_card=300, thresh_card_moving=200, thresh_card_cluster=400):
         self.frame_size = frame_size
@@ -41,7 +42,7 @@ class BlackJAIEngine:
                     if (len(hand) == 2):
                         # Assign hand to player based on location of cluster
                         quadrant = self._get_card_loc_quadrant(hand[0])
-                        if(quadrant == 4):
+                        if (quadrant == 4):
                             hand_to_add = [hand[i].get_card() for i in range(len(hand))]
                             self.state.add_hand_to_player(0, hand_to_add)
                             self.state.update_count_hand(hand_to_add)
@@ -53,7 +54,7 @@ class BlackJAIEngine:
                         self.state.add_hand_to_dealer([hand[0].get_card()])
                         self.state.update_count_card(hand[0].get_card())
                     else:
-                        print("ERROR: hand has more than 2 cards. In BlackJAIEngine.update()")
+                        print("Error: hand has more than 2 cards. In BlackJAIEngine.update()")
                 self.state.set_phase(TURN_PHASE)
                 self.engine_payload = self.state.serialize()
                 print("Deal phase complete. Turn phase started.") if DEBUG else None
@@ -64,7 +65,7 @@ class BlackJAIEngine:
                 self.state.set_phase(DEAL_PHASE)
                 print("Turn phase complete. Deal phase started.") if DEBUG else None
             else:
-                # continuously get average card locations to determine if cards are moving and 
+                # continuously get average card locations to determine if cards are moving and
                 # whether they should be added to a player's hand
                 avg_card_locs = self.frame_card_info_queues.get_avg_locs(self.thresh_card_moving)
                 if (len(avg_card_locs) >= (self.num_players * 2 + 1)):
@@ -85,18 +86,16 @@ class BlackJAIEngine:
             if len(self.state.dealer.get_hands()[0]) == 1:
                 self.apply_strategy()
         else:
-            print("ERROR: Invalid phase. In BlackJAIEngine.update()")
-        
+            print("Error: Invalid phase. In BlackJAIEngine.update()")
+
         # Print out player hands
         # print("\n1: ", self.state.get_player(0).get_hands()) if DEBUG else None
         # print("2: ", self.state.get_player(1).get_hands()) if DEBUG else None
         # print("D: ", self.state.get_dealer().get_hands(), "\n") if DEBUG else None
 
-
-        # TODO: make json out of state and respective counts/strategies and return it
+        # make json out of state and respective counts/strategies and return it
         print(self.engine_payload, "\n") if DEBUG else None
         return self.engine_payload
-    
 
     # Apply strategy to state
     def apply_strategy(self):
@@ -107,8 +106,8 @@ class BlackJAIEngine:
             action_list = self.strategy.get_action(player, dealer_card)
             self.engine_payload["actions"].append(action_list)
 
-    # If len(hand) == 1, and player hand contains card, player has split. 
-    # Keep same card in hand and remove other card from player hand. 
+    # If len(hand) == 1, and player hand contains card, player has split.
+    # Keep same card in hand and remove other card from player hand.
     # If len(hand) == 1, and player hand does not contain the card, add card to new hand in player.
     # Else if len(hand) >= 2, and player hand contains 2 or more cards, add any new cards from hand.
     def _check_player_cards_and_add(self, player_idx, hand):
@@ -125,7 +124,7 @@ class BlackJAIEngine:
             # player has not split, add card to new hand in player
             self.state.get_player(player_idx).add_hand([hand[0].get_card()])
             self.state.update_count_card(hand[0].get_card())
-            print("ERROR: player has not split, add card to new hand in player. Dealt too far from hand. In BlackJAIEngine._check_player_cards_and_add()") if DEBUG else None
+            print("Error: player has not split, add card to new hand in player. Dealt too far from hand. In BlackJAIEngine._check_player_cards_and_add()") if DEBUG else None
         elif (len(hand) >= 2 and (hi_ci is not None)):
             # 1st card exists in player hand, add any new cards from hand
             hand_idx = hi_ci[0]
@@ -178,7 +177,6 @@ class BlackJAIEngine:
                 return 2
             else:
                 return 4
-    
 
     # Clusters the cards into piles for each player and the dealer.
     # Returns a 2D list of CardInfo where each row is a player's or dealer's hand.
@@ -263,7 +261,7 @@ class CardInfoQueues:
 
     def __init__(self, buffer_size=20):
         self.buffer_size = buffer_size
-        # buffer must be 80% full to get final average location and put in players hand after 
+        # buffer must be 80% full to get final average location and put in players hand after
         self.thresh_num_card_infos_full = buffer_size - int((0.6 * buffer_size))
         self.dict = {
             # 2
@@ -344,7 +342,7 @@ class CardInfoQueues:
                 self.dict[key].append(None)
             else:
                 if (len(card_info[key]) > 1):
-                    print("ERROR: more than 1 card info in card_info dict. In CardInfoQueues.add()")
+                    print("Error: more than 1 card info in card_info dict. In CardInfoQueues.add()")
                 elif (len(card_info[key]) == 1):
                     self.dict[key].append(card_info[key][0])
 
@@ -505,7 +503,7 @@ if __name__ == "__main__":
     }
 
     engine.update(json_data)
-    
+
     # feed the same json data to fill the buffer
     for i in range(30):
         engine.update(json_data)

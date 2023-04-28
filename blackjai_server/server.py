@@ -100,7 +100,8 @@ class BlackJAIServer:
                 # Set timer using datetime
                 start_time = datetime.datetime.now()
                 # Create video writer
-                result = cv.VideoWriter(f"./BlackJAI/dev/blackjai-server/blackjai_server/data/videos/{start_time.strftime('%Y_%m_%d__%H_%M_%S')}.avi", cv.VideoWriter_fourcc(*'MJPG'), 10, (width, height))
+                result = cv.VideoWriter(f"./BlackJAI/dev/blackjai-server/blackjai_server/data/videos/{start_time.strftime('%Y_%m_%d__%H_%M_%S')}.avi",
+                                        cv.VideoWriter_fourcc(*'MJPG'), 10, (width, height))
                 while True:
                     # Receive image from publisher and convert to numpy array
                     msg, frame = receiver.receive(timeout=4)
@@ -147,8 +148,7 @@ class VideoStreamSubscriber:
     def receive(self, timeout=15.0):
         flag = self._data_ready.wait(timeout=timeout)
         if not flag:
-            raise TimeoutError(
-                "Timeout while reading from subscriber tcp://{}:{}".format(self.hostname, self.port))
+            raise TimeoutError("Error: Timeout while reading from subscriber tcp://{}:{}".format(self.hostname, self.port))
         self._data_ready.clear()
         return self._data
 

@@ -73,16 +73,18 @@ class CardInfo:
     # returns the location difference between this card and another card
     def get_loc_diff(self, card_info):
         return int(math.sqrt((self.location[0] - card_info.get_location()[0])**2 + (self.location[1] - card_info.get_location()[1])**2))
-    
+
     # returns the average location and confidence between this card and another card (must be the same card)
     def avg_card_infos(self, card_info):
         if (self.card.get_value_suit() != card_info.card.get_value_suit()):
             raise Exception("CardInfo objects must be the same card")
-        return CardInfo((int((self.location[0] + card_info.location[0]) / 2), int((self.location[1] + card_info.location[1]) / 2)), self.card, (self.confidence + card_info.confidence) / 2)
+        return CardInfo((int((self.location[0] + card_info.location[0]) / 2),
+                         int((self.location[1] + card_info.location[1]) / 2)),
+                        self.card, (self.confidence + card_info.confidence) / 2)
 
     def __str__(self):
         return "(" + str(self.location) + " " + str(self.card) + " " + str(self.confidence) + ")"
-    
+
     def __repr__(self):
         return "(" + str(self.location) + " " + str(self.card) + " " + str(self.confidence) + ")"
 
@@ -169,14 +171,14 @@ class Player:
 
     def __str__(self):
         return "Cards: " + str(self.hands) + "\nMinimum Bet: " + str(self.minimum_bet)
-    
+
     def __repr__(self) -> str:
         return "Cards: " + str(self.hands) + "\nMinimum Bet: " + str(self.minimum_bet)
-    
+
     # Serialize the player object to a dictionary
     def serialize(self):
         return {"hands": [self.serialize_hand(hand) for hand in self.hands], "minimum_bet": self.minimum_bet}
-    
+
     def serialize_hand(self, hand: list[Card]):
         return [card.get_value_suit() for card in hand]
 
@@ -193,13 +195,18 @@ class BasicStrategy:
     PH = "PH"
     PD = "PD"
     RS = "RS"
+    # custom actions
+    BJ = "BJ"
+    BS = "BS"
+    ER = "ER"
 
     # Map each action key to its corresponding action description
     ACTIONS_TEXT = {H_: "Hit", S_: "Stand", DH: "Double down if permitted, else Hit", DS: "Double down if permitted, else Stand",
-               RH: "Surrender if permitted, else Hit", P_: "Split", PH: "Split if double down permitted, else Hit",
-               PD: "Split if double down permitted, else Double down", RS: "Surrender if permitted, else Stand"}
-    
-    ACTIONS = {H_: H_, S_: S_, DH: DH, DS: DS, RH: RH, P_: P_, PH: PH, PD: PD, RS: RS}
+                    RH: "Surrender if permitted, else Hit", P_: "Split", PH: "Split if double down permitted, else Hit",
+                    PD: "Split if double down permitted, else Double down", RS: "Surrender if permitted, else Stand", BJ: "Blackjack",
+                    BS: "Bust", ER: "Error: Soft hand over 21"}
+
+    ACTIONS = {H_: H_, S_: S_, DH: DH, DS: DS, RH: RH, P_: P_, PH: PH, PD: PD, RS: RS, BJ: BJ, BS: BS, ER: ER}
 
     # Define the dealer's up card index offset
     DEALER_OFFSET = 2
@@ -288,11 +295,11 @@ class BasicStrategy:
 
             if (cards_sum > 21):
                 if (is_soft):
-                    actions_list.append("ERROR: Soft hand over 21")
+                    actions_list.append(self.ER)
                 else:
-                    actions_list.append("Bust")
+                    actions_list.append(self.BS)
             elif ((cards_sum == 21) and (num_cards == 2)):
-                actions_list.append("Blackjack!")
+                actions_list.append(self.BJ)
             elif ((num_cards == 2) and (cur_hand[0].get_value() == cur_hand[1].get_value())):
                 # pair
                 PLAYER_OFFSET = 2
@@ -316,7 +323,7 @@ class BasicStrategy:
                 actions_list.append(self.BASIC_STRATEGY_HARD[player_idx][dealer_idx])
             else:
                 # only one card, always hit
-                actions_list.append("Hit")
+                actions_list.append(self.H_)
         return actions_list
 
 
@@ -361,7 +368,7 @@ class CountingSystems:
     def set_num_decks(self, num_decks: int):
         self.num_decks = num_decks
 
-    # update all running counts for the card(s) in the hand if they have not been seen before 
+    # update all running counts for the card(s) in the hand if they have not been seen before
     # or if there are less than the number of decks
     def update_running_counts_hand(self, hand: list[Card]):
         for card in hand:
@@ -427,7 +434,7 @@ class CountingSystems:
     def __str__(self) -> str:
         return "Hi-Lo: " + str(self.count_hi_lo) + "\nOmega II: " + str(self.count_omega_ii) + \
                "\nWong Halves: " + str(self.count_wong_halves) + "\nZen Count: " + str(self.count_zen_count)
-    
+
     # serialize the running counts
     def serialize(self) -> dict:
         return {
