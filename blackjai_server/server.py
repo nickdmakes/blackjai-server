@@ -77,7 +77,7 @@ class BlackJAIServer:
 
                     # Send payload to ip 192.168.1.9 port 5005 using UDP
                     # encode payload
-                    payload = str(payload).encode('utf-8')
+                    payload = str(payload).replace("'", '"').encode('utf-8')
                     self.socket.sendto(payload, ("192.168.50.9", BLACKJAI_CONNECT_PORT))
 
                     # Display image

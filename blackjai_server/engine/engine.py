@@ -82,9 +82,9 @@ class BlackJAIEngine:
                             self._check_player_cards_and_add(1, hand)
                         elif (quadrant == 1 or quadrant == 2):
                             self._check_dealer_cards_and_add(hand)
-            self.engine_payload = self.state.serialize()
-            if len(self.state.dealer.get_hands()[0]) == 1:
-                self.apply_strategy()
+                self.engine_payload = self.state.serialize()
+                if len(self.state.dealer.get_hands()[0]) == 1:
+                    self.apply_strategy()
         else:
             print("Error: Invalid phase. In BlackJAIEngine.update()")
 
