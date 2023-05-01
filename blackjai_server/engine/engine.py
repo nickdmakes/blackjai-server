@@ -41,6 +41,7 @@ class BlackJAIEngine:
                 # determine when 5 distinct cards are not moving anymore (buffer 80% full)
                 avg_card_locs = self.frame_card_info_queues.get_avg_locs(self.thresh_card_moving)
                 if (len(avg_card_locs) == (self.num_players * 2 + 1)):
+                    err = False
                     # segment cards into number of players + dealer piles
                     hands = self._cluster_cards(avg_card_locs)
                     for i in range(len(hands)):
@@ -61,10 +62,14 @@ class BlackJAIEngine:
                             self.state.add_hand_to_dealer([hand[0].get_card()])
                             self.state.update_count_card(hand[0].get_card())
                         else:
+                            err = True
                             print("Error: hand has more than 2 cards. In BlackJAIEngine.update()")
-                    self.state.set_phase(TURN_PHASE)
-                    self.engine_payload = self.state.serialize()
-                    print("Deal phase complete. Turn phase started.")
+                    if (not err):
+                        self.state.set_phase(TURN_PHASE)
+                        self.engine_payload = self.state.serialize()
+                        print("Deal phase complete. Turn phase started.")
+                    else:
+                        print("Error: Deal phase not complete due to invalid cards in hand. Rearrange cards to correct quadrants. In BlackJAIEngine.update()")
         elif (self.state.get_phase() == TURN_PHASE):
             if (self.frame_card_info_queues.is_empty()):
                 # reset state to deal phase
