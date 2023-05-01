@@ -42,6 +42,9 @@ class BlackJAIState:
     def update_count_card(self, card: Card):
         self.count_systems.update_running_counts_card(card)
 
+    def reset_count_systems(self):
+        self.count_systems.reset_running_counts()
+
     def set_phase(self, phase):
         self.phase = phase
 

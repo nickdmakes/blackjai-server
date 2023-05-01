@@ -4,7 +4,7 @@ import math
 from blackjai_server.engine.state import BlackJAIState, SHUFFLE_PHASE, DEAL_PHASE, TURN_PHASE
 from blackjai_server.engine.models import Card, CardInfo, BasicStrategy
 
-DEBUG = True
+DEBUG = False
 
 
 class BlackJAIEngine:
@@ -29,41 +29,48 @@ class BlackJAIEngine:
         if (self.state.get_phase() == SHUFFLE_PHASE):
             if (not self.frame_card_info_queues.is_empty()):
                 self.state.set_phase(DEAL_PHASE)
-                print("Shuffle phase complete. Deal phase started.") if DEBUG else None
+                print("Shuffle phase complete. Deal phase started.")
         elif (self.state.get_phase() == DEAL_PHASE):
-            # determine when 5 distinct cards are not moving anymore (buffer 80% full)
-            avg_card_locs = self.frame_card_info_queues.get_avg_locs(self.thresh_card_moving)
-            if (len(avg_card_locs) == (self.num_players * 2 + 1)):
-                # segment cards into number of players + dealer piles
-                hands = self._cluster_cards(avg_card_locs)
-                for i in range(len(hands)):
-                    # hand: list[CardInfo]
-                    hand = hands[i]
-                    if (len(hand) == 2):
-                        # Assign hand to player based on location of cluster
-                        quadrant = self._get_card_loc_quadrant(hand[0])
-                        if (quadrant == 4):
-                            hand_to_add = [hand[i].get_card() for i in range(len(hand))]
-                            self.state.add_hand_to_player(0, hand_to_add)
-                            self.state.update_count_hand(hand_to_add)
-                        elif (quadrant == 3):
-                            hand_to_add = [hand[i].get_card() for i in range(len(hand))]
-                            self.state.add_hand_to_player(1, hand_to_add)
-                            self.state.update_count_hand(hand_to_add)
-                    elif (len(hand) == 1):
-                        self.state.add_hand_to_dealer([hand[0].get_card()])
-                        self.state.update_count_card(hand[0].get_card())
-                    else:
-                        print("Error: hand has more than 2 cards. In BlackJAIEngine.update()")
-                self.state.set_phase(TURN_PHASE)
-                self.engine_payload = self.state.serialize()
-                print("Deal phase complete. Turn phase started.") if DEBUG else None
+            if (self.state.get_count_systems().get_deck_dict_num_cards() >= (52 - 4 * (self.num_players + 1))):
+                # reset state to shuffle phase, reset counts, and clear card info queues
+                self.state.reset_state()
+                self.state.reset_count_systems()
+                self.frame_card_info_queues.clear()
+                print("Deal phase complete. Shuffle phase started.")
+            else:
+                # determine when 5 distinct cards are not moving anymore (buffer 80% full)
+                avg_card_locs = self.frame_card_info_queues.get_avg_locs(self.thresh_card_moving)
+                if (len(avg_card_locs) == (self.num_players * 2 + 1)):
+                    # segment cards into number of players + dealer piles
+                    hands = self._cluster_cards(avg_card_locs)
+                    for i in range(len(hands)):
+                        # hand: list[CardInfo]
+                        hand = hands[i]
+                        if (len(hand) == 2):
+                            # Assign hand to player based on location of cluster
+                            quadrant = self._get_card_loc_quadrant(hand[0])
+                            if (quadrant == 4):
+                                hand_to_add = [hand[i].get_card() for i in range(len(hand))]
+                                self.state.add_hand_to_player(0, hand_to_add)
+                                self.state.update_count_hand(hand_to_add)
+                            elif (quadrant == 3):
+                                hand_to_add = [hand[i].get_card() for i in range(len(hand))]
+                                self.state.add_hand_to_player(1, hand_to_add)
+                                self.state.update_count_hand(hand_to_add)
+                        elif (len(hand) == 1):
+                            self.state.add_hand_to_dealer([hand[0].get_card()])
+                            self.state.update_count_card(hand[0].get_card())
+                        else:
+                            print("Error: hand has more than 2 cards. In BlackJAIEngine.update()")
+                    self.state.set_phase(TURN_PHASE)
+                    self.engine_payload = self.state.serialize()
+                    print("Deal phase complete. Turn phase started.")
         elif (self.state.get_phase() == TURN_PHASE):
             if (self.frame_card_info_queues.is_empty()):
                 # reset state to deal phase
                 self.state.reset_state()
                 self.state.set_phase(DEAL_PHASE)
-                print("Turn phase complete. Deal phase started.") if DEBUG else None
+                print("Turn phase complete. Deal phase started.")
             else:
                 # continuously get average card locations to determine if cards are moving and
                 # whether they should be added to a player's hand
@@ -124,7 +131,7 @@ class BlackJAIEngine:
             # player has not split, add card to new hand in player
             self.state.get_player(player_idx).add_hand([hand[0].get_card()])
             self.state.update_count_card(hand[0].get_card())
-            print("Error: player has not split, add card to new hand in player. Dealt too far from hand. In BlackJAIEngine._check_player_cards_and_add()") if DEBUG else None
+            print("Error: player has not split, add card to new hand in player. Dealt too far from hand. In BlackJAIEngine._check_player_cards_and_add()")
         elif (len(hand) >= 2 and (hi_ci is not None)):
             # 1st card exists in player hand, add any new cards from hand
             hand_idx = hi_ci[0]
@@ -262,7 +269,7 @@ class CardInfoQueues:
     def __init__(self, buffer_size=20):
         self.buffer_size = buffer_size
         # buffer must be 80% full to get final average location and put in players hand after
-        self.thresh_num_card_infos_full = buffer_size - int((0.6 * buffer_size))
+        self.thresh_num_card_infos_full = max(self.THRESH_NUM_CARD_INFOS, buffer_size - int((0.8 * buffer_size)))
         self.dict = {
             # 2
             "2C": [],
@@ -434,6 +441,11 @@ class CardInfoQueues:
     # AKA: all queues contain only None or empty or have less than THRESH_NUM_CARD_INFOS card infos
     def is_empty(self) -> bool:
         return all(self.is_key_empty(card_type) for card_type in self.dict)
+
+    # clears all queues
+    def clear(self):
+        for key in self.dict:
+            self.dict[key].clear()
 
     def __str__(self):
         return str(self.dict)

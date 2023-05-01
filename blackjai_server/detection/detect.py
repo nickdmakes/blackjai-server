@@ -31,7 +31,7 @@ def detect_card_type_roboflow(image, model):
 
 def detect_card_type_yolo(image, model):
     # Get results from yolo prediction
-    results = model.predict(image, conf=0.5, half=True, verbose=False)
+    results = model.predict(image, conf=0.5, verbose=False)
     num_detections = len(results[0].boxes.xyxy)
 
     boxes = results[0].boxes

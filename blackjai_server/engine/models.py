@@ -365,6 +365,16 @@ class CountingSystems:
         true_count = self.get_true_count_zen_count(num_decks_remaining)
         return max(1, true_count)
 
+    def get_deck_dict(self) -> dict:
+        return self.deck_dict
+
+    # returns the number of cards in the deck dictionary
+    def get_deck_dict_num_cards(self) -> int:
+        num_cards = 0
+        for key in self.deck_dict:
+            num_cards += self.deck_dict[key]
+        return num_cards
+
     def set_num_decks(self, num_decks: int):
         self.num_decks = num_decks
 
@@ -437,6 +447,9 @@ class CountingSystems:
 
     # serialize the running counts
     def serialize(self) -> dict:
+        max_num_cards = 52 * self.num_decks
+        num_decks_remaining = round((max_num_cards - self.get_deck_dict_num_cards()) / max_num_cards, 3)
+        # could send more accurate count taking into account the number of decks remaining
         return {
             "count_hi_lo": self.count_hi_lo,
             "count_omega_ii": self.count_omega_ii,
