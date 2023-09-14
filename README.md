@@ -99,15 +99,8 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 ## Contact
 
 Nick Matthews - nickd.mf7@gmail.com  
-Soma Szabo - [Email]  
-Michael Holm - [Email]
 
 Project Link: [https://github.com/nickmatthews713/blackjai-server](https://github.com/nickmatthews713/blackjai-server)
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
 
 * []()
 * []()
