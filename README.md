@@ -102,8 +102,4 @@ Nick Matthews - nickd.mf7@gmail.com
 
 Project Link: [https://github.com/nickmatthews713/blackjai-server](https://github.com/nickmatthews713/blackjai-server)
 
-* []()
-* []()
-* []()
-
 <p align="right">(<a href="#top">back to top</a>)</p>
