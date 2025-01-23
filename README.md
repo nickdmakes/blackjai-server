@@ -41,7 +41,8 @@
 
 BlackJAI Server is a python application that inputs a video stream of Black Jack game, preprocesses frames, detects cards, and tracks game state in order to determine most optimal action in the game of BlackJack.
 
-The video stream comes from its neighbor repository, blackjai-capture, whose sole responsibility is to capture footage from a camera and broadcast frames over the local network.
+> [!IMPORTANT]  
+> This project only processes images that are recieved over the network from imagezmq. You will need to configure your own image broadcast application to send images to the blackjai-server
 
 ### Built With
 
@@ -55,8 +56,6 @@ The video stream comes from its neighbor repository, blackjai-capture, whose sol
 ## Getting Started
 
 ### Prerequisites
-
-#### NOTE: In order to recieve images from blackjai-capture, you will need to be on the same LAN as the BlackJAI Capture device
 
 ### Installation
 
